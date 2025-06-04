@@ -5,8 +5,8 @@ from concurrent.futures import ThreadPoolExecutor
 from threading import Lock
 from typing import TypedDict
 
-RNB_CSV_PATH = "/Users/dinum-327866/code/RNB-to-OSM/tmp/RNB_nat.csv"
-RNB_CSV_PATH = "/Volumes/Intenso/hackathon_RNB/RNB_nat.csv"
+RNB_CSV_PATH = "/Users/dinum-327866/code/RNB-to-OSM/tmp/RNB_nat_stripped.csv"
+# RNB_CSV_PATH = "/Volumes/Intenso/hackathon_RNB/RNB_nat.csv"
 
 import csv
 import concurrent.futures
@@ -22,7 +22,7 @@ def read_csv_generator(file_path: str, f, batch_size=1000, num_threads=8):
         return [f(i, row) for (i, row) in rows]
 
     with open(file_path, mode="r") as file:
-        reader = csv.reader(file)
+        reader = DictReader(file, delimiter=",")
         batch = []
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
@@ -33,7 +33,7 @@ def read_csv_generator(file_path: str, f, batch_size=1000, num_threads=8):
                 i += 1
                 if i % 100000 == 0:
                     print(f"Yielded {i} entries")
-                if i > 500000:
+                if i > 50000000:
                     break
                 batch.append((i, row))
                 if len(batch) >= batch_size:
@@ -69,7 +69,7 @@ class RNBIndex:
 
     def _csv_generator(self):
         with open(RNB_CSV_PATH, "r") as file:
-            reader = DictReader(file, delimiter=";")
+            reader = DictReader(file, delimiter=",")
 
             i = 0
             for row in reader:
@@ -81,16 +81,13 @@ class RNBIndex:
                     print(f"Yielded {i} entries")
 
     def get_intersecting_buildings(self, shape: Polygon) -> list[RNBBuilding]:
-        return self.rtree_index.intersection(shape.bounds)
+        return self.rtree_index.intersection(shape.bounds, objects="raw")
 
     def build_rtree_index_with_generator(self) -> None:
-        properties = index.Property(
-            dimension=2,
-            leaf_capacity=1000,
-            fill_factor=0.9,
-            buffering_capacity=1000,
-        )
-        self.rtree_index = Rtree(self._threaded_csv_generator(), properties=properties)
+        properties = index.Property(dimension=2)
+        generator = self._threaded_csv_generator()
+        # breakpoint()
+        self.rtree_index = Rtree(generator, properties=properties)
 
     def build_index(self) -> None:
         with open(RNB_CSV_PATH, "r") as file:
@@ -123,8 +120,13 @@ class RNBIndex:
                 print(f"Inserted {i-1} shapes")
 
     def _line_to_entry(self, row, index):
-        rnb_id = row["rnb_id"]
-        wkt_shape = row["shape"]
+        try:
+            rnb_id = row["rnb_id"]
+            wkt_shape = row["shape"]
+        except Exception as e:
+            print(e)
+            print(row)
+            exit(1)
 
         if wkt_shape.startswith("SRID="):
             # Extract the actual WKT part after the semicolon
