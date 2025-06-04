@@ -1,8 +1,53 @@
 from csv import DictReader
-from shapely import wkt  # type: ignore
-from rtree import Rtree
+from shapely import wkt, Polygon
+from rtree import Rtree, index
+from concurrent.futures import ThreadPoolExecutor
+from threading import Lock
+from typing import TypedDict
 
 RNB_CSV_PATH = "/Users/dinum-327866/code/RNB-to-OSM/tmp/RNB_nat.csv"
+RNB_CSV_PATH = "/Volumes/Intenso/hackathon_RNB/RNB_nat.csv"
+
+import csv
+import concurrent.futures
+
+
+class RNBBuilding(TypedDict):
+    rnb_id: str
+    shape: Polygon
+
+
+def read_csv_generator(file_path: str, f, batch_size=1000, num_threads=8):
+    def batch_processor(rows):
+        return [f(i, row) for (i, row) in rows]
+
+    with open(file_path, mode="r") as file:
+        reader = csv.reader(file)
+        batch = []
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+            futures = []
+
+            i = -1
+            for row in reader:
+                i += 1
+                if i % 100000 == 0:
+                    print(f"Yielded {i} entries")
+                if i > 500000:
+                    break
+                batch.append((i, row))
+                if len(batch) >= batch_size:
+                    futures.append(executor.submit(batch_processor, batch))
+                    batch = []
+
+            # Submit the last batch if it's not empty
+            if batch:
+                futures.append(executor.submit(batch_processor, batch))
+
+            # Yield results as they complete
+            for future in concurrent.futures.as_completed(futures):
+                for result in future.result():
+                    yield result
 
 
 class RNBIndex:
@@ -11,46 +56,99 @@ class RNBIndex:
     def __init__(self):
         self.rtree_index = None
         self.id_to_rnb_id = {}
+        self.lock = Lock()
 
-    def count(self):
+    def count(self) -> int:
         return len(self.rtree_index)
 
-    def build_index(self):
-        # Open CSV
-        # Lazy loop over lines as dicts
-        # Extract `rnb_id` and `shape` (in WKT with SRID prefix)
-        # Add shape to rtree index
+    def _threaded_csv_generator(self):
+        def f(i, row):
+            return self._line_to_entry(row, i)
+
+        return read_csv_generator(RNB_CSV_PATH, f)
+
+    def _csv_generator(self):
         with open(RNB_CSV_PATH, "r") as file:
             reader = DictReader(file, delimiter=";")
-            rtree_index = Rtree()
 
             i = 0
             for row in reader:
+                entry = self._line_to_entry(row, i)
+                yield entry
                 i += 1
-                rnb_id = row["rnb_id"]
-                wkt_shape = row["shape"]
 
-                if wkt_shape.startswith("SRID="):
-                    # Extract the actual WKT part after the semicolon
-                    wkt_shape = wkt_shape.split(";", 1)[1]
-                # Parse WKT using Shapely
-                shape_geom = wkt.loads(wkt_shape)
-
-                item = {
-                    "rnb_id": rnb_id,
-                    "shape": shape_geom,
-                }
-
-                # self.id_to_rnb_id[i] = rnb_id
-                rtree_index.insert(i, shape_geom.bounds, obj=item)
                 if i % 100000 == 0:
-                    print(f"Inserted {i} shapes")
+                    print(f"Yielded {i} entries")
 
-        self.rtree_index = rtree_index
+    def get_intersecting_buildings(self, shape: Polygon) -> list[RNBBuilding]:
+        return self.rtree_index.intersection(shape.bounds)
+
+    def build_rtree_index_with_generator(self) -> None:
+        properties = index.Property(
+            dimension=2,
+            leaf_capacity=1000,
+            fill_factor=0.9,
+            buffering_capacity=1000,
+        )
+        self.rtree_index = Rtree(self._threaded_csv_generator(), properties=properties)
+
+    def build_index(self) -> None:
+        with open(RNB_CSV_PATH, "r") as file:
+            reader = DictReader(file, delimiter=";")
+            self.rtree_index = Rtree()
+
+            with ThreadPoolExecutor(max_workers=8) as executor:
+                futures = []
+                batch = []
+                batch_size = 10000
+                i = 1
+
+                for row in reader:
+                    batch.append((row, i))
+                    i += 1
+
+                    if len(batch) == batch_size:
+                        futures.append(executor.submit(self._process_batch, batch))
+                        batch = []
+                        print(f"Processed {i-1} lines")
+
+                # Process any remaining lines in the last batch
+                if batch:
+                    futures.append(executor.submit(self._process_batch, batch))
+                    print(f"Processed {i-1} lines")
+
+                for future in futures:
+                    future.result()  # Wait for all futures to complete
+
+                print(f"Inserted {i-1} shapes")
+
+    def _line_to_entry(self, row, index):
+        rnb_id = row["rnb_id"]
+        wkt_shape = row["shape"]
+
+        if wkt_shape.startswith("SRID="):
+            # Extract the actual WKT part after the semicolon
+            wkt_shape = wkt_shape.split(";", 1)[1]
+        # Parse WKT using Shapely
+        shape_geom = wkt.loads(wkt_shape)
+
+        obj = RNBBuilding(rnb_id=rnb_id, shape=shape_geom)
+
+        return (index, shape_geom.bounds, obj)
+
+    def _process_line(self, row, index):
+        entry = self._line_to_entry(row, index)
+        with self.lock:
+            self.rtree_index.insert(entry)
+
+    def _process_batch(self, batch):
+        for row, index in batch:
+            self._process_line(row, index)
 
     @staticmethod
-    def get_instance():
+    def get_instance() -> "RNBIndex":
         if RNBIndex.instance is None:
             RNBIndex.instance = RNBIndex()
-            RNBIndex.instance.build_index()
+            RNBIndex.instance.build_rtree_index_with_generator()
+            # RNBIndex.instance.build_hash_index_with_generator()
         return RNBIndex.instance
