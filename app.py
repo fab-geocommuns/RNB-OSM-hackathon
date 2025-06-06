@@ -10,7 +10,7 @@ config_name = os.environ.get("FLASK_ENV", "default")
 app.config.from_object(config[config_name])
 
 # Initialize SQLAlchemy
-# db = SQLAlchemy(app)
+db = SQLAlchemy(app)
 
 # Initialize Celery
 # from celery import Celery
