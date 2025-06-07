@@ -10,6 +10,7 @@ Flask==3.1.1
 Flask-Celery==2.4.3
 Flask-Script==2.0.6
 Flask-SQLAlchemy==3.1.1
+GeoAlchemy2==0.15.2
 itsdangerous==2.2.0
 Jinja2==3.1.6
 kombu==5.5.3

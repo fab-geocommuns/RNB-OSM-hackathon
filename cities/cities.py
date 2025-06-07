@@ -11,7 +11,7 @@ class City:
     code_insee: str
     shape: Geometry
 
-    _cached_cities: None | list["City"] = None
+    _cached_cities: None | dict[str, "City"] = None
 
     def __init__(self, name: str, code_insee: str, shape: Geometry):
         self.name = name
@@ -22,7 +22,13 @@ class City:
     def list() -> list["City"]:
         if City._cached_cities is None:
             City._cached_cities = get_cities()
-        return City._cached_cities
+        return list(City._cached_cities.values())
+
+    @staticmethod
+    def get_by_code_insee(code_insee: str) -> "City":
+        if City._cached_cities is None:
+            City._cached_cities = get_cities()
+        return City._cached_cities[code_insee]
 
     def __str__(self) -> str:
         return f"{self.name} ({self.code_insee})"
@@ -31,8 +37,8 @@ class City:
         return f"{self.name} ({self.code_insee})"
 
 
-def get_cities() -> list[City]:
-    cities = []
+def get_cities() -> dict[str, City]:
+    cities = {}
     with open(Path(__file__).parent / JSON_FILE, "r") as f:
         data = json.load(f)
         for row in data:
@@ -41,5 +47,5 @@ def get_cities() -> list[City]:
                 code_insee=row["code_insee"],
                 shape=shape_from_wkt(row["shape"]),
             )
-            cities.append(city)
+            cities[city.code_insee] = city
     return cities

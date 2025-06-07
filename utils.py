@@ -1,11 +1,11 @@
 from typing import Callable, Generator
-from shapely.geometry import Geometry
 from shapely.wkt import loads
 from csv import DictReader
 import concurrent.futures
+from typing import Any
 
 
-def shape_from_wkt(wkt_shape: str) -> Geometry:
+def shape_from_wkt(wkt_shape: str) -> Any:
     if wkt_shape.startswith("SRID="):
         # Extract the actual WKT part after the semicolon
         wkt_shape = wkt_shape.split(";", 1)[1]

@@ -1,7 +1,7 @@
-from flask import Flask, render_template, request, jsonify, flash, redirect, url_for
-from flask_sqlalchemy import SQLAlchemy
+from flask import Flask, render_template, jsonify
 from config import config
 import os
+from database import init_database
 
 app = Flask(__name__)
 
@@ -10,7 +10,7 @@ config_name = os.environ.get("FLASK_ENV", "default")
 app.config.from_object(config[config_name])
 
 # Initialize SQLAlchemy
-db = SQLAlchemy(app)
+db = init_database(app)
 
 # Initialize Celery
 # from celery import Celery
