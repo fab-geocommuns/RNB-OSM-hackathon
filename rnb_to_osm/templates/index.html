@@ -91,7 +91,7 @@
                 <li><span class="success">✓</span> SQLAlchemy ORM</li>
                 <li><span class="success">✓</span> PostgreSQL database support</li>
                 <li><span class="success">✓</span> Template rendering</li>
-                <li><span class="success">✓</span> Celery async tasks</li>
+                <li><span class="success">✓</span> Celery async exports</li>
             </ul>
         </div>
 
@@ -144,7 +144,7 @@
     </script>
 
     <script>
-        let currentTaskId = null;
+        let currentExportId = null;
         let statusInterval = null;
 
         async function triggerExport() {
@@ -168,11 +168,7 @@
                 const data = await response.json();
                 
                 if (response.ok) {
-                    currentTaskId = data.task_id;
-                    showStatus('Task started successfully! Checking status...', 'pending');
-                    
-                    // Start polling for status
-                    statusInterval = setInterval(checkStatus, 2000);
+                    downloadFile(data.result);
                 } else {
                     showStatus(`Error: ${data.message}`, 'error');
                     resetButton();
@@ -184,43 +180,19 @@
             }
         }
 
-        async function checkStatus() {
-            if (!currentTaskId) return;
-            
-            try {
-                const response = await fetch(`/export/status/${currentTaskId}`);
-                const data = await response.json();
-                
-                if (data.status === 'success') {
-                    showStatus('Export completed successfully!', 'success');
-                    clearInterval(statusInterval);
-                    resetButton();
-                } else if (data.status === 'error') {
-                    showStatus(`Error: ${data.message}`, 'error');
-                    clearInterval(statusInterval);
-                    resetButton();
-                } else {
-                    showStatus(`Status: ${data.message}`, 'pending');
-                }
-                
-            } catch (error) {
-                showStatus(`Error checking status: ${error.message}`, 'error');
-                clearInterval(statusInterval);
-                resetButton();
-            }
-        }
-
-        function showStatus(message, type) {
-            const status = document.getElementById('status');
-            status.textContent = message;
-            status.className = `status-${type}`;
-            status.style.display = 'block';
-        }
-
         function resetButton() {
             const btn = document.getElementById('exportBtn');
             btn.disabled = false;
             btn.textContent = 'Start Export';
+        }
+
+        function downloadFile(content) {
+            const blob = new Blob([content], { type: 'application/xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'export.osm';
+            a.click();
         }
     </script>
 </body>

@@ -23,52 +23,20 @@ def trigger_export():
     POST endpoint to trigger the async prepare_export task
     """
     code_insee = request.get_json().get("code_insee")
-    # Trigger the async task
-    export = Export(code_insee)
-    export.start()
-    compute_matches(export, code_insee)
+
+    with app.app_context():
+        export = Export(code_insee)
+        export.start()
+        compute_matches(export, code_insee)
 
     # Return task ID for tracking
     return (
         jsonify(
             {
                 "status": "success",
-                "message": "Export task started successfully",
-                "export_id": export.id,
+                "message": "Export task successful",
+                "result": export.export_file_content(),
             }
         ),
         202,
     )
-
-
-@app.route("/export/status/<export_id>")
-def export_status(export_id):
-    """
-    GET endpoint to check the status of an export task
-    """
-    try:
-        export = Export.get_by_id(export_id)
-
-        if export.status == "pending":
-            response = {
-                "status": "pending",
-                "message": "Task is waiting to be processed",
-            }
-        elif export.status == "finished":
-            response = {
-                "status": "success",
-                "message": "Task completed successfully",
-                "result": export.export_file_content(),
-            }
-        else:
-            response = {"status": export.status, "message": str(export.info)}
-
-        return jsonify(response)
-
-    except Exception as e:
-        return (
-            jsonify(
-                {"status": "error", "message": f"Failed to get task status: {str(e)}"}
-            ),
-            500,
-        )

@@ -26,7 +26,7 @@ def build_osm_to_rnb_ids_map(code_insee: str) -> dict[str, OSMIDInfo]:
                     rnb_id.strip() for rnb_id in matched_building.rnb_ids.split(";")
                 ],
                 "avg_overlap": matched_building.score,
-                "diff": matched_building.diff,
+                "diff": matched_building.diff or "",
             }
             osm_to_rnb_ids[matched_building.osm_id] = osm_id_info
         return osm_to_rnb_ids
@@ -49,9 +49,6 @@ def set_attribute(xml_node: xml.Element, key: str, value: str) -> xml.Element:
     return xml_node
 
 
-already_seen_ids = set()
-
-
 def modify_node(
     xml_node: xml.Element, osm_to_rnb_ids: dict[str, OSMIDInfo]
 ) -> xml.Element:
@@ -62,9 +59,6 @@ def modify_node(
     info = osm_to_rnb_ids.get(osm_id_with_type, None)
     if info is None:
         return xml_node
-    if osm_id_with_type in already_seen_ids:
-        print(f"Already seen {osm_id_with_type}")
-    already_seen_ids.add(osm_id_with_type)
     new_node = copy.deepcopy(xml_node)
     new_node = add_tag_node(new_node, "ref:FR:RNB", ";".join(info["rnb_ids"]))
     if info["diff"] != "":
@@ -106,18 +100,15 @@ def prepare_xml_with_rnb_tags(code_insee: str, xml_str: str) -> str:
     osm_to_rnb_ids = build_osm_to_rnb_ids_map(code_insee)
     new_document = xml.Element("osm", version="0.6", generator="hackathon/20.05.2025")
     for xml_node in list_xml_osm_subnodes(xml_str):
-        if xml_node.tag == "node":
-            # modified_node = modify_node(xml_node, osm_to_rnb_ids)
-            modified_node = xml_node
-            new_document.append(modified_node)
+        if xml_node.tag == "node" or xml_node.tag == "note" or xml_node.tag == "meta":
+            # Do not touch
+            new_document.append(xml_node)
         elif xml_node.tag == "way":
             modified_way = modify_node(xml_node, osm_to_rnb_ids)
             new_document.append(modified_way)
         elif xml_node.tag == "relation":
             modified_way = modify_node(xml_node, osm_to_rnb_ids)
             new_document.append(modified_way)
-        elif xml_node.tag == "note" or xml_node.tag == "meta":
-            pass
         else:
             raise ValueError(f"Unknown node type: {xml_node.tag}")
     new_xml = xml.tostring(new_document, encoding="utf-8").decode("utf-8")

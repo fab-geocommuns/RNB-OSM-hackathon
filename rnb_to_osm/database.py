@@ -7,6 +7,7 @@ from flask import Flask
 from pathlib import Path
 from sqlalchemy import text
 from datetime import datetime
+from typing import Optional
 
 db = SQLAlchemy()
 
@@ -42,7 +43,7 @@ class MatchedBuilding(db.Model):
     osm_id: Mapped[str] = mapped_column(String, nullable=False)
     rnb_ids: Mapped[str] = mapped_column(String, nullable=False)
     score: Mapped[float] = mapped_column(Float, nullable=False)
-    diff: Mapped[str] = mapped_column(String, nullable=True)
+    diff: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
 
 class Export(db.Model):

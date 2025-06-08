@@ -1,3 +1,4 @@
+import os
 from rnb_to_osm import app
 import argparse
 from rnb_to_osm.matching import match_function
@@ -17,7 +18,7 @@ def print_match_sql(code_insee):
 
 
 def run():
-    app.run(debug=True)
+    app.run(debug=True, host="0.0.0.0", port=os.environ.get("PORT", 5000))
 
 
 def main():

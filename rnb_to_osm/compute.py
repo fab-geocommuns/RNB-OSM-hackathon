@@ -11,10 +11,10 @@ from geoalchemy2.shape import from_shape
 from rnb_to_osm import app, db
 from rnb_to_osm.database import Export, OSMBuilding
 from rnb_to_osm.xml_rnb_tags import prepare_xml_with_rnb_tags
+from sqlalchemy import text
 
 
 def compute_matches(export: Export, code_insee: str) -> None:
-    # bbox = [2.396499, 48.859851, 2.404385, 48.862812]
     city = City.get_by_code_insee(code_insee)
     bbox = list(bounds(city.shape))
     final_bbox = [
@@ -23,7 +23,6 @@ def compute_matches(export: Export, code_insee: str) -> None:
         bbox[3],
         bbox[2],
     ]
-    print("computed bbox", final_bbox)
 
     cache_file_path = f"tmp/overpass_xml_{code_insee}.xml"
     if os.path.exists(cache_file_path):
@@ -55,6 +54,10 @@ def import_osm_buildings_to_table(
 ) -> None:
     with app.app_context():
         for building in osm_buildings:
+            # Remove existing buildings with the same code_insee
+            db.session.execute(
+                text(f"DELETE FROM osm_buildings WHERE code_insee = '{code_insee}'")
+            )
             db.session.add(
                 OSMBuilding(
                     id=building["id"],
