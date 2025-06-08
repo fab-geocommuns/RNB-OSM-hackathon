@@ -26,7 +26,7 @@ def match_function(code_insee: str) -> str:
 
     return f"""
         WITH recouvrement AS (
-            SELECT osm.{osm_id_column} osm_id,
+            SELECT DISTINCT osm.{osm_id_column} osm_id,
                 rnb.{rnb_id_column} rnb_id,
                     CASE
                         WHEN st_isvalid(osm.{osm_shape_column})

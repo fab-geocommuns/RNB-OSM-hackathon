@@ -15,7 +15,7 @@ class RNBBuilding(db.Model):
     __tablename__ = "rnb_buildings"
 
     rnb_id: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
-    code_insee: Mapped[str] = mapped_column(String, nullable=True)
+    code_insee: Mapped[str] = mapped_column(String, nullable=True, index=True)
     shape: Mapped[str] = mapped_column(Geometry("GEOMETRY", srid=4326), nullable=False)
 
     def __repr__(self):
@@ -27,7 +27,7 @@ class OSMBuilding(db.Model):
 
     unused_pk: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
     id: Mapped[int] = mapped_column(Integer, nullable=False)
-    code_insee: Mapped[str] = mapped_column(String, nullable=True)
+    code_insee: Mapped[str] = mapped_column(String, nullable=True, index=True)
     shape: Mapped[str] = mapped_column(Geometry("GEOMETRY", srid=4326), nullable=False)
 
     def __repr__(self):
@@ -38,7 +38,7 @@ class MatchedBuilding(db.Model):
     __tablename__ = "matched_buildings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
-    code_insee: Mapped[str] = mapped_column(String, nullable=True)
+    code_insee: Mapped[str] = mapped_column(String, nullable=True, index=True)
     osm_id: Mapped[str] = mapped_column(String, nullable=False)
     rnb_ids: Mapped[str] = mapped_column(String, nullable=False)
     score: Mapped[float] = mapped_column(Float, nullable=False)
@@ -48,7 +48,7 @@ class MatchedBuilding(db.Model):
 class Export(db.Model):
     __tablename__ = "exports"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
-    code_insee: Mapped[str] = mapped_column(String, nullable=False)
+    code_insee: Mapped[str] = mapped_column(String, nullable=False, index=True)
     status: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
@@ -109,6 +109,5 @@ def init_database(app: Flask) -> SQLAlchemy:
             print("Database tables reset successfully")
         else:
             db.create_all()
-            print("Database tables created successfully")
 
         return db
