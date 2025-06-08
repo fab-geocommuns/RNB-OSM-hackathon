@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }}</title>
+    <title>RNB - OSM Matching</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -79,8 +79,9 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>{{ title }}</h1>
+        <div class="container">
+            <h1>RNB - OSM Matching</h1>
+        </div>
         
         <div class="info">
             <h3>🎉 Your Flask App is Ready!</h3>
@@ -96,34 +97,59 @@
 
         <div class="export-section">
             <h3>📤 Export Data</h3>
-            <p>Click the button below to trigger an async export preparation task:</p>
+            <p>Select a city to export the data:</p>
+            <select id="departmentSelect" value="00">
+            </select>
+            <select id="citySelect" value="00000">
+            </select>
             <button id="exportBtn" class="btn" onclick="triggerExport()">Start Export</button>
             <div id="status"></div>
         </div>
-
-        <div class="info">
-            <h3>📝 Next Steps:</h3>
-            <ol>
-                <li>Update the database URI in <code>config.py</code> with your PostgreSQL credentials</li>
-                <li>Make sure PostgreSQL is running on your system</li>
-                <li>Make sure Redis is running for Celery (or update broker in <code>app.py</code>)</li>
-                <li>Start Celery worker: <code>celery -A tasks worker --loglevel=info</code></li>
-                <li>Run the app with <code>python app.py</code></li>
-            </ol>
-        </div>
-
-        <div class="info">
-            <h3>🔧 Database Configuration:</h3>
-            <p>The app is configured to use PostgreSQL. Update the connection string in <code>config.py</code>:</p>
-            <pre><code>postgresql://username:password@localhost:5432/database_name</code></pre>
-        </div>
     </div>
+
+    <script>
+        const departmentSelect = document.getElementById('departmentSelect');
+        const citySelect = document.getElementById('citySelect');
+
+        const cities = {{ cities | tojson }};
+        const departmentsToCities = {};
+        cities.forEach(city => {
+            const department = city.code_insee.slice(0, 2);
+            if (!departmentsToCities[department]) {
+                departmentsToCities[department] = [];
+            }
+            departmentsToCities[department].push(city);
+        });
+        const departments = Object.keys(departmentsToCities).sort();
+        departments.forEach(department => {
+            const option = document.createElement('option');
+            option.value = department;
+            option.textContent = department;
+            departmentSelect.appendChild(option);
+        });
+        departmentSelect.value = '00';
+        citySelect.value = '00000';
+
+        departmentSelect.addEventListener('change', () => {
+            const department = departmentSelect.value;
+            const cities = departmentsToCities[department];
+            citySelect.innerHTML = '';
+            cities.forEach(city => {
+                const option = document.createElement('option');
+                option.value = city.code_insee;
+                option.textContent = city.label;
+                citySelect.appendChild(option);
+            });
+        });
+    </script>
 
     <script>
         let currentTaskId = null;
         let statusInterval = null;
 
         async function triggerExport() {
+            const citySelect = document.getElementById('citySelect');
+            const codeInsee = citySelect.value;
             const btn = document.getElementById('exportBtn');
             const status = document.getElementById('status');
             
@@ -135,7 +161,8 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    body: JSON.stringify({ code_insee: codeInsee })
                 });
                 
                 const data = await response.json();

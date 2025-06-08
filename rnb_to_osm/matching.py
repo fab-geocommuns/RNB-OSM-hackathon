@@ -1,4 +1,4 @@
-from app import app, db
+from rnb_to_osm import app, db
 from sqlalchemy import text
 
 

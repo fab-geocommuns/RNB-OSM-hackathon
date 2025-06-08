@@ -1,8 +1,8 @@
-from compute import compute_matches
-from cities.cities import City
+from rnb_to_osm.compute import compute_matches
+from rnb_to_osm.cities import City
 from tqdm import tqdm
-from app import app, db
-from database import MatchedBuilding
+from rnb_to_osm import app, db
+from rnb_to_osm.database import MatchedBuilding, Export
 
 with app.app_context():
     already_computed_code_insee = set(
@@ -17,4 +17,6 @@ remaining_cities = [
     city for city in all_cities if city.code_insee not in already_computed_code_insee
 ]
 for city in tqdm(remaining_cities, desc="Computing matches"):
-    compute_matches(city.code_insee)
+    export = Export(city.code_insee)
+    export.start()
+    compute_matches(export, city.code_insee)

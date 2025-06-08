@@ -1,11 +1,7 @@
 import overpy
 from typing import Literal, TypedDict
-from app import app, db
-from database import OSMBuilding
 import requests
 from shapely.geometry import Polygon, MultiPolygon
-from geoalchemy2.shape import from_shape
-from sqlalchemy import text
 
 
 class TransientOSMBuilding(TypedDict):
@@ -125,18 +121,3 @@ def get_buildings_from_overpass_xml(xml: str) -> list[TransientOSMBuilding]:
     api = overpy.Overpass()
     result = api.parse_xml(xml)
     return osm_objects_to_buildings(result.ways + result.relations)
-
-
-def import_osm_buildings_to_table(
-    code_insee: str, osm_buildings: list[TransientOSMBuilding]
-) -> None:
-    with app.app_context():
-        for building in osm_buildings:
-            db.session.add(
-                OSMBuilding(
-                    id=building["id"],
-                    shape=from_shape(building["shape"], srid=4326),
-                    code_insee=code_insee,
-                )
-            )
-        db.session.commit()

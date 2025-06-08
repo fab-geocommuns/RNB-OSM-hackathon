@@ -1,11 +1,12 @@
 import os
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import String, Integer, ARRAY, Float
+from sqlalchemy import String, Integer, ARRAY, Float, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 from geoalchemy2 import Geometry
 from flask import Flask
 from pathlib import Path
 from sqlalchemy import text
+from datetime import datetime
 
 db = SQLAlchemy()
 
@@ -42,6 +43,41 @@ class MatchedBuilding(db.Model):
     rnb_ids: Mapped[str] = mapped_column(String, nullable=False)
     score: Mapped[float] = mapped_column(Float, nullable=False)
     diff: Mapped[str] = mapped_column(String, nullable=True)
+
+
+class Export(db.Model):
+    __tablename__ = "exports"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
+    code_insee: Mapped[str] = mapped_column(String, nullable=False)
+    status: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+    def __repr__(self):
+        return f"<Export {self.id}>"
+
+    def __init__(self, code_insee: str):
+        self.code_insee = code_insee
+        self.status = "pending"
+        self.created_at = datetime.now()
+        self.updated_at = datetime.now()
+
+    def start(self):
+        self.status = "running"
+        self.updated_at = datetime.now()
+        db.session.commit()
+
+    def finish(self):
+        self.status = "finished"
+        self.updated_at = datetime.now()
+        db.session.commit()
+
+    def export_file_path(self) -> str:
+        return f"tmp/export_{self.code_insee}.osm"
+
+    def export_file_content(self) -> str:
+        with open(self.export_file_path(), "r") as f:
+            return f.read()
 
 
 def import_rnb_buildings(db: SQLAlchemy) -> None:

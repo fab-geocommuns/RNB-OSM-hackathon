@@ -1,6 +1,6 @@
 import json
 from shapely import Geometry
-from utils import shape_from_wkt
+from rnb_to_osm.utils import shape_from_wkt
 from pathlib import Path
 
 JSON_FILE = "data/cities.json"
