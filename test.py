@@ -5,13 +5,16 @@ from app import app, db
 from database import MatchedBuilding
 
 with app.app_context():
-    already_computed = set(
+    already_computed_code_insee = set(
         db.session.query(MatchedBuilding.code_insee).all()  # type: ignore
     )
-print("already_computed", already_computed)
+    already_computed_code_insee = set(
+        [code_insee for code_insee, in already_computed_code_insee]
+    )
+print("already_computed", already_computed_code_insee)
 all_cities = City.list()
-for city in tqdm(all_cities, desc="Computing matches"):
-    if city.code_insee in already_computed:
-        print(f"Skipping {city.code_insee} because it has already been computed")
-        continue
+remaining_cities = [
+    city for city in all_cities if city.code_insee not in already_computed_code_insee
+]
+for city in tqdm(remaining_cities, desc="Computing matches"):
     compute_matches(city.code_insee)

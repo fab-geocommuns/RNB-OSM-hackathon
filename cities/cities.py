@@ -22,7 +22,7 @@ class City:
     def list() -> list["City"]:
         if City._cached_cities is None:
             City._cached_cities = get_cities()
-        return list(City._cached_cities.values())
+        return list(sorted(City._cached_cities.values(), key=lambda x: x.code_insee))
 
     @staticmethod
     def get_by_code_insee(code_insee: str) -> "City":

@@ -14,19 +14,26 @@ class TransientOSMBuilding(TypedDict):
     shape: Polygon | MultiPolygon
 
 
-def ring_coords(nodes):
+def is_valid_ring(nodes: list[overpy.Node]) -> bool:
     pts = [(float(n.lon), float(n.lat)) for n in nodes]
-    if len(pts) < 3:
-        raise ValueError("need ≥3 points for a polygon")
-    # close the ring
+    # need at least 4 coords (3 distinct + closing point)
+    if len(pts) < 4:
+        return False
+    # must already be closed
     if pts[0] != pts[-1]:
-        pts.append(pts[0])
-    return pts
+        return False
+    return True
 
 
-def way_to_building(way):
-    coords = ring_coords(way.get_nodes())
-    return {"type": "way", "id": way.id, "shape": Polygon(coords)}
+def way_to_building(way: overpy.Way) -> TransientOSMBuilding | None:
+    nodes = way.get_nodes()
+    if not is_valid_ring(nodes):
+        return None
+    return {
+        "type": "way",
+        "id": way.id,
+        "shape": Polygon([(n.lon, n.lat) for n in nodes]),
+    }
 
 
 def relation_to_building(rel: overpy.Relation) -> TransientOSMBuilding:
@@ -36,10 +43,14 @@ def relation_to_building(rel: overpy.Relation) -> TransientOSMBuilding:
         # only handling ways here; skip nodes or sub-relations
         if isinstance(member, overpy.RelationWay):
             way = member.resolve(resolve_missing=True)
-            coords = [(float(n.lon), float(n.lat)) for n in way.get_nodes()]
-            if member.role == "outer":
+            nodes = way.get_nodes()
+            coords = [(float(n.lon), float(n.lat)) for n in nodes]
+            print(member.role, len(nodes))
+            if is_valid_ring(nodes) and (
+                member.role == "outer" or member.role == "outline"
+            ):
                 outers.append(coords)
-            elif member.role == "inner":
+            elif is_valid_ring(nodes) and member.role == "inner":
                 inners.append(coords)
 
     # Build a MultiPolygon if more than one outer ring,
@@ -50,10 +61,13 @@ def relation_to_building(rel: overpy.Relation) -> TransientOSMBuilding:
             Polygon(o, holes=inners if i == 0 else []) for i, o in enumerate(outers)
         ]
         shape = MultiPolygon(polys)
-    else:
+    elif len(outers) == 1:
         shape = Polygon(outers[0], holes=inners)
+    else:
+        print(f"Relation {rel.id} has no valid outer ring")
+        return None
 
-    return {"type": "relation", "id": rel.id, "shape": shape}
+    return {"type": "relation", "id": -rel.id, "shape": shape}
 
 
 def osm_objects_to_buildings(
@@ -62,9 +76,13 @@ def osm_objects_to_buildings(
     buildings = []
     for obj in osm_objects:
         if isinstance(obj, overpy.Way):
-            buildings.append(way_to_building(obj))
+            building = way_to_building(obj)
+            if building is not None:
+                buildings.append(building)
         elif isinstance(obj, overpy.Relation):
-            buildings.append(relation_to_building(obj))
+            building = relation_to_building(obj)
+            if building is not None:
+                buildings.append(building)
     return buildings
 
 
