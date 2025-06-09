@@ -5,17 +5,20 @@ from sqlalchemy import text
 def generate_matches(code_insee: str) -> None:
     with app.app_context():
         db.session.execute(
-            text(f"DELETE FROM matched_buildings WHERE code_insee = '{code_insee}'")
+            text("DELETE FROM matched_buildings WHERE code_insee = :code_insee").params(
+                code_insee=code_insee
+            )
         )
         db.session.execute(
             text(
-                f"INSERT INTO matched_buildings(code_insee, osm_id, rnb_ids, score, diff) {match_function(code_insee)}"
-            )
+                "INSERT INTO matched_buildings(code_insee, osm_id, rnb_ids, score, diff) "
+                + match_function()
+            ).params(code_insee=code_insee)
         )
         db.session.commit()
 
 
-def match_function(code_insee: str) -> str:
+def match_function() -> str:
     osm_table = "osm_buildings"
     rnb_table = "rnb_buildings"
     osm_shape_column = "shape"
@@ -38,7 +41,7 @@ def match_function(code_insee: str) -> str:
             FROM {osm_table} osm
                 JOIN {rnb_table} rnb ON st_intersects(osm.{osm_shape_column}, rnb.{rnb_shape_column})
             WHERE
-                osm.code_insee = '{code_insee}' AND
+                osm.code_insee = :code_insee AND
                     CASE
                         WHEN st_isvalid(osm.{osm_shape_column})
                             AND st_isvalid(rnb.{rnb_shape_column})
@@ -48,7 +51,7 @@ def match_function(code_insee: str) -> str:
                     END > {min_score}::double precision
         )
         SELECT
-            '{code_insee}' AS code_insee,
+            :code_insee AS code_insee,
                 CASE
                     WHEN POSITION(('-'::text) IN (r.osm_id::text)) > 0 THEN 'relation/'::text || replace(r.osm_id::text, '-'::text, ''::text)
                     ELSE 'way/'::text || r.osm_id::text
@@ -70,7 +73,7 @@ def match_function(code_insee: str) -> str:
         GROUP BY r.osm_id
         UNION
         SELECT
-            '{code_insee}' AS code_insee,
+            :code_insee AS code_insee,
                 CASE
                     WHEN POSITION(('-'::text) IN (r.osm_id::text)) > 0 THEN 'relation/'::text || replace(r.osm_id::text, '-'::text, ''::text)
                     ELSE 'way/'::text || r.osm_id::text

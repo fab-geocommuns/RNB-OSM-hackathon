@@ -17,12 +17,24 @@ def index():
     return render_template("index.html", cities=cities)
 
 
+def validate_code_insee(code_insee: str) -> None:
+    if not code_insee.isdigit() or len(code_insee) != 5:
+        raise ValueError("Code INSEE invalide")
+    if not City.get_by_code_insee(code_insee):
+        raise ValueError(f"Ville avec code INSEE {code_insee} non trouvée")
+
+
 @app.route("/export", methods=["POST"])
 def trigger_export():
     """
     POST endpoint to trigger the async prepare_export task
     """
     code_insee = request.get_json().get("code_insee")
+
+    try:
+        validate_code_insee(code_insee)
+    except ValueError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
 
     with app.app_context():
         export = Export(code_insee)

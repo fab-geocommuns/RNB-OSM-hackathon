@@ -145,6 +145,7 @@
             
             btn.disabled = true;
             btn.textContent = 'En cours...';
+            hideStatus();
             
             try {
                 const response = await fetch('/export', {
@@ -160,6 +161,7 @@
                 if (response.ok) {
                     downloadFile(data.result);
                 } else {
+                    console.error(data);
                     showStatus(`Error: ${data.message}`, 'error');
                 }
                 resetButton();
@@ -183,6 +185,18 @@
             a.href = url;
             a.download = 'export.osm';
             a.click();
+        }
+
+        function hideStatus() {
+            const status = document.getElementById('status');
+            status.style.display = 'none';
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status-${type}`;
+            status.style.display = 'block';
         }
     </script>
 </body>

@@ -58,7 +58,8 @@ def import_osm_buildings_to_table(
         for building in osm_buildings:
             # Remove existing buildings with the same code_insee
             db.session.execute(
-                text(f"DELETE FROM osm_buildings WHERE code_insee = '{code_insee}'")
+                text("DELETE FROM osm_buildings WHERE code_insee = :code_insee"),
+                {"code_insee": code_insee}
             )
             db.session.add(
                 OSMBuilding(
