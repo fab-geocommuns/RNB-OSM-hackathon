@@ -11,7 +11,7 @@ with app.app_context():
     already_computed_code_insee = set(
         [code_insee for code_insee, in already_computed_code_insee]
     )
-print("already_computed", already_computed_code_insee)
+print(f"{len(already_computed_code_insee)} already computed")
 all_cities = City.list()
 remaining_cities = [
     city for city in all_cities if city.code_insee not in already_computed_code_insee

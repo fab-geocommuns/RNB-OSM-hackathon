@@ -32,7 +32,7 @@ def way_to_building(way: overpy.Way) -> TransientOSMBuilding | None:
     }
 
 
-def relation_to_building(rel: overpy.Relation) -> TransientOSMBuilding:
+def relation_to_building(rel: overpy.Relation) -> TransientOSMBuilding | None:
     outers = []
     inners = []
     for member in rel.members:
@@ -41,7 +41,6 @@ def relation_to_building(rel: overpy.Relation) -> TransientOSMBuilding:
             way = member.resolve(resolve_missing=True)
             nodes = way.get_nodes()
             coords = [(float(n.lon), float(n.lat)) for n in nodes]
-            print(member.role, len(nodes))
             if is_valid_ring(nodes) and (
                 member.role == "outer" or member.role == "outline"
             ):

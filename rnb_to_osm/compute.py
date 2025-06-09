@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from rnb_to_osm.cities import City
 from rnb_to_osm.osm import (
     get_overpass_xml,
@@ -15,36 +16,37 @@ from sqlalchemy import text
 
 
 def compute_matches(export: Export, code_insee: str) -> None:
+    today = datetime.now().strftime("%Y-%m-%d")
     city = City.get_by_code_insee(code_insee)
     bbox = list(bounds(city.shape))
-    final_bbox = [
-        bbox[1],
-        bbox[0],
-        bbox[3],
-        bbox[2],
+    bbox_for_overpass = [
+        float(bbox[1]),
+        float(bbox[0]),
+        float(bbox[3]),
+        float(bbox[2]),
     ]
 
-    cache_file_path = f"tmp/overpass_xml_{code_insee}.xml"
+    cache_file_path = f"tmp/overpass_xml_{today}_{code_insee}.xml"
     if os.path.exists(cache_file_path):
+        print(f"Using cached overpass xml from {cache_file_path}")
         with open(cache_file_path, "r") as f:
             xml = f.read()
     else:
-        xml = get_overpass_xml(final_bbox)
+        print(
+            f"Not in cache. Getting overpass xml for {code_insee} ({bbox_for_overpass})"
+        )
+        xml = get_overpass_xml(bbox_for_overpass)
         with open(cache_file_path, "w") as f:
             f.write(xml)
-    print("got overpass xml")
-    # breakpoint()
+
     osm_buildings = get_buildings_from_overpass_xml(xml)
     import_osm_buildings_to_table(code_insee, osm_buildings)
-    print("imported osm buildings to table")
 
     generate_matches(code_insee)
-    print("generated matches")
     new_xml = prepare_xml_with_rnb_tags(code_insee, xml)
-    print("prepared xml with rnb tags")
     with open(export.export_file_path(), "w") as f:
         f.write(new_xml)
-    print("wrote xml to file", export.export_file_path())
+    print(f"Wrote result to {export.export_file_path()}")
 
     export.finish()
 
