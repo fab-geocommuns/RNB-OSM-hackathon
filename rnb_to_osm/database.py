@@ -86,7 +86,7 @@ def import_rnb_buildings(db: SQLAlchemy) -> None:
     db.session.execute(
         text(
             f"""
-            COPY rnb_buildings(rnb_id, shape) FROM '{current_dir}/rnb/data/RNB_nat_stripped_cut.csv'
+            COPY rnb_buildings(rnb_id, shape) FROM '{current_dir}/data/RNB_nat_stripped_cut.csv'
             WITH (FORMAT CSV, DELIMITER ',', HEADER TRUE, ENCODING 'UTF8');
         """
         )
