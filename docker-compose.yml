@@ -24,6 +24,7 @@ services:
         condition: service_healthy
     volumes:
       - ./tmp:/app/tmp
+      - ./rnb_to_osm/data:/app/rnb_to_osm/data/
 
 volumes:
   postgres_data:

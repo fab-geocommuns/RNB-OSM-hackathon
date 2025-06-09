@@ -78,31 +78,21 @@
         }
     </style>
 </head>
-<body>
-        <div class="container">
-            <h1>RNB - OSM Matching</h1>
-        </div>
-        
+<body>  
         <div class="info">
-            <h3>🎉 Your Flask App is Ready!</h3>
-            <p>This Flask application is successfully configured with:</p>
-            <ul>
-                <li><span class="success">✓</span> Flask web framework</li>
-                <li><span class="success">✓</span> SQLAlchemy ORM</li>
-                <li><span class="success">✓</span> PostgreSQL database support</li>
-                <li><span class="success">✓</span> Template rendering</li>
-                <li><span class="success">✓</span> Celery async exports</li>
-            </ul>
+            <h3>RNB to OSM</h3>
+            <p>Ce service a pour but de faciliter la mise à jour des données OSM avec les données RNB.</p>
+            <p>Il permet de générer un fichier OSM avec les tags RNB correspondants, pour des correspondances de bâtiments raisonnablement fiables.</p>
         </div>
 
         <div class="export-section">
-            <h3>📤 Export Data</h3>
-            <p>Select a city to export the data:</p>
+            <h3>📤 Exporter les données</h3>
+            <p>Sélectionnez un département et une ville pour exporter les données:</p>
             <select id="departmentSelect" value="00">
             </select>
             <select id="citySelect" value="00000">
             </select>
-            <button id="exportBtn" class="btn" onclick="triggerExport()">Start Export</button>
+            <button id="exportBtn" class="btn" onclick="triggerExport()">Exporter</button>
             <div id="status"></div>
         </div>
     </div>
@@ -154,7 +144,7 @@
             const status = document.getElementById('status');
             
             btn.disabled = true;
-            btn.textContent = 'Starting...';
+            btn.textContent = 'En cours...';
             
             try {
                 const response = await fetch('/export', {
@@ -171,8 +161,8 @@
                     downloadFile(data.result);
                 } else {
                     showStatus(`Error: ${data.message}`, 'error');
-                    resetButton();
                 }
+                resetButton();
                 
             } catch (error) {
                 showStatus(`Error: ${error.message}`, 'error');
@@ -183,7 +173,7 @@
         function resetButton() {
             const btn = document.getElementById('exportBtn');
             btn.disabled = false;
-            btn.textContent = 'Start Export';
+            btn.textContent = 'Exporter';
         }
 
         function downloadFile(content) {
