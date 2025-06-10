@@ -1,37 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RNB - OSM Matching</title>
+    <title>RNB to OSM</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            font-family: "Open Sans", sans-serif;
+            font-size: 14px;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f5f5f5;
+            background-color: #fefefe;
         }
+
         .container {
             background-color: white;
             padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
-        h1 {
-            color: #333;
+
+        .centered {
             text-align: center;
         }
+
+        h1 {
+            color: #333;
+        }
+
         .info {
-            background-color: #e8f4fd;
             padding: 15px;
             border-radius: 5px;
             margin: 20px 0;
         }
-        .success {
-            color: #28a745;
-            font-weight: bold;
+
+        .info img {
+            max-height: 150px;
         }
+
         .export-section {
             background-color: #f8f9fa;
             padding: 20px;
@@ -39,7 +47,8 @@
             margin: 20px 0;
             border-left: 4px solid #007bff;
         }
-        .btn {
+
+        .button {
             background-color: #007bff;
             color: white;
             padding: 10px 20px;
@@ -47,30 +56,46 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            text-decoration: none;
+            height: 40px;
         }
-        .btn:hover {
+
+        select {
+            height: 40px;
+            border-radius: 4px;
+            padding: 0 10px;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        .button:hover {
             background-color: #0056b3;
         }
-        .btn:disabled {
+
+        .button:disabled {
             background-color: #6c757d;
             cursor: not-allowed;
         }
+
         #status {
             margin-top: 15px;
             padding: 10px;
             border-radius: 4px;
             display: none;
         }
+
         .status-success {
             background-color: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
         }
+
         .status-error {
             background-color: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
+
         .status-pending {
             background-color: #fff3cd;
             color: #856404;
@@ -78,23 +103,101 @@
         }
     </style>
 </head>
-<body>  
-        <div class="info">
-            <h3>RNB to OSM</h3>
-            <p>Ce service a pour but de faciliter la mise à jour des données OSM avec les données RNB.</p>
-            <p>Il permet de générer un fichier OSM avec les tags RNB correspondants, pour des correspondances de bâtiments raisonnablement fiables.</p>
-        </div>
 
-        <div class="export-section">
-            <h3>📤 Exporter les données</h3>
-            <p>Sélectionnez un département et une ville pour exporter les données:</p>
-            <select id="departmentSelect" value="00">
-            </select>
-            <select id="citySelect" value="00000">
-            </select>
-            <button id="exportBtn" class="btn" onclick="triggerExport()">Exporter</button>
-            <div id="status"></div>
-        </div>
+<body>
+    <div class="info centered">
+        <img src="{{ url_for('static', filename='RNB-to-OSM.svg') }}" alt="RNB to OSM" />
+        <h1>RNB to OSM</h1>
+        <p>Identifiez les bâtiments à améliorer dans OSM grâce aux données du
+            <a href="https://rnb.beta.gouv.fr/" target="_blank">
+                Référentiel National du Bâtiment (RNB)
+            </a>.
+        </p>
+        <br />
+        <p><a class="button" href="https://rnb.beta.gouv.fr/carte" target="_blank">Voir la carte du RNB</a>
+        </p>
+        
+    </div>
+    <div class="export-section">
+        <h1>
+            <span><span class="emoticon">📤</span></span>&nbsp;Exporter les données
+        </h1>
+        <p>Générez un fichier .osm (à ouvrir directement dans JOSM) contenant uniquement les bâtiments OSM
+            (récupérés depuis overpass) sur lesquels les tags RNB sont rajoutés.</p>
+        <blockquote>
+            <p><span data-emoticon="exclamation"><span class="emoticon">❗</span></span>Attention : l'intégration des ID
+                RNB doit se faire après un travail minutieux de vérification manuelle. Si vous n'êtes pas sûr de vous,
+                n'hésitez pas à demander de l'aide <a
+                    href="https://forum.openstreetmap.fr/" rel="noreferrer" target="_blank">sur le forum</a>.</p>
+        </blockquote>
+        <p>Sélectionnez un département et une ville pour exporter les données:</p>
+
+        <select placeholder="Département" id="departmentSelect" style="min-width: 100px;">
+        </select>
+        <select placeholder="Ville" id="citySelect" style="min-width: 250px;">
+        </select>
+        <button id="exportBtn" class="button" onclick="triggerExport()">Exporter</button>
+        <div id="status"></div>
+        <p><span></span><span>🚧</span></span> N.B. 10 juin 2025 : ce service d'export de données est en bêta-test. Vos
+            propositions d'améliorations sont les bienvenues <a
+                href="https://forum.openstreetmap.fr/" rel="noreferrer" target="_blank">sur le forum</a>.</p>
+    </div>
+    <div class="info">
+        <h1>
+            <span data-emoticon="information_source"><span>ℹ️</span></span>&nbsp;Documentation
+        </h1>
+        <p>Ces données sont le résultat d’une analyse comparative calculant automatiquement un taux de confiance : c'est
+            le pourcentage de recouvrement des surfaces des bâtiments entre le référentiel du RNB et OSM. Seules les
+            données considérées comme les plus fiables sont exportées : celles dont le taux de confiance est &gt;70%.
+        </p>
+        <p><em>Le détail de ce calcul est publié à l’adresse <a
+                    href="https://github.com/fab-geocommuns/RNB-OSM-hackathon" rel="noreferrer" target="_blank">GitHub -
+                    fab-geocommuns/RNB-OSM-hackathon: Hackathon pour rapprocher les ID-RNBs de OSM</a></em></p>
+        <ul class="markdown__list">
+            <li>
+                <span>Définition d’un bâtiment dans OSM sur laquelle se base les données :&nbsp;<a
+                       
+                        href="https://wiki.openstreetmap.org/wiki/FR:Key:ref:FR:RNB#D%C3%A9finition_d'un_b%C3%A2timent_dans_OSM"
+                        rel="noreferrer" target="_blank">FR<span data-emoticon="key"><span>:Key:</span></span>ref<span
+                            data-emoticon="fr"><span>:FR:</span></span>RNB — OpenStreetMap Wiki</a></span>
+            </li>
+            <li>
+                <span>Définition d’un bâtiment dans le RNB :&nbsp;<a
+                        href="https://rnb.beta.gouv.fr/definition" rel="noreferrer" target="_blank">Référentiel National
+                        des Bâtiments</a></span>
+            </li>
+        </ul>
+        <h1><span data-emoticon="hammer_and_wrench"><span>🛠️</span></span>&nbsp;Exploitation
+            des données</h1>
+        <ul class="markdown__list">
+            <li><span>Le tag&nbsp;<span class="codespan__pre-wrap"><code>ref:FR:RNB</code></span>&nbsp;est ajouté aux
+                    bâtiments récupérés d'OSM. Il contient un ou plusieurs identifiant(s) RNB suggéré(s) à l’intégration
+                    dans OpenStreetMap. Il est possible de disposer de valeurs multiples, séparées par des&nbsp;<span
+                        class="codespan__pre-wrap"><code>;</code></span>&nbsp;pour un seul bâtiment OSM. L’identifiant
+                    RnB est pérenne pour chaque bâtiment.</span></li>
+        </ul>
+        <p><em>N.B. : si un bâtiment est détruit et un nouveau est reconstruit au même emplacement, alors un nouvel ID
+                est créé dans le RNB ; l’ancien ID continue d’exister mais prend le statut “détruit”. Cette information
+                ne fait pas partie de l'export : elle est à retrouver dans les données du RNB.</em></p>
+        <ul class="markdown__list">
+            <li><span>Le tag&nbsp;<span class="codespan__pre-wrap"><code>diff:ref:FR:RNB</code></span>&nbsp;: précision
+                    éventuelle de différence de modélisation entre les données RNB et OSM. Il prend la valeur&nbsp;<span
+                        class="codespan__pre-wrap"><code>splited</code></span>&nbsp;si un bâtiment RNB correspond à
+                    plusieurs bâtiments OSM, il prend la valeur&nbsp;<span
+                        class="codespan__pre-wrap"><code>multiple</code></span>&nbsp;si plusieurs bâtiments RNB
+                    correspondent à un seul bâtiment OSM.</span></li>
+        </ul>
+        <p><em>Par exemple, les deux bâtiments identifiés sous les références <span
+                    class="codespan__pre-wrap"><code>S3HFGTCH14VF;C5NW96R48RQE</code></span> dans le RNB correspond dans
+                OSM à un seul bâtiment <a
+                    href="https://www.openstreetmap.org/way/190591890" rel="noreferrer"
+                    target="_blank">https://www.openstreetmap.org/way/190591890</a> avec le tag <span
+                    class="codespan__pre-wrap"><code>diff:ref:FR:RNB=multiple</code></span>.</em></p>
+        <hr />
+        <p>Code source de ce site : <a
+                href="https://github.com/fab-geocommuns/RNB-OSM-hackathon" rel="noreferrer"
+                target="_blank">https://github.com/fab-geocommuns/RNB-OSM-hackathon</a> </p>
+    
     </div>
 
     <script>
@@ -142,11 +245,11 @@
             const codeInsee = citySelect.value;
             const btn = document.getElementById('exportBtn');
             const status = document.getElementById('status');
-            
+
             btn.disabled = true;
             btn.textContent = 'En cours...';
             hideStatus();
-            
+
             try {
                 const response = await fetch('/export', {
                     method: 'POST',
@@ -155,9 +258,9 @@
                     },
                     body: JSON.stringify({ code_insee: codeInsee })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (response.ok) {
                     downloadFile(data.result);
                 } else {
@@ -165,7 +268,7 @@
                     showStatus(`Error: ${data.message}`, 'error');
                 }
                 resetButton();
-                
+
             } catch (error) {
                 showStatus(`Error: ${error.message}`, 'error');
                 resetButton();
@@ -200,4 +303,5 @@
         }
     </script>
 </body>
+
 </html>
