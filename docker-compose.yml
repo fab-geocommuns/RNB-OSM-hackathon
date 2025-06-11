@@ -1,10 +1,9 @@
 services:
   db:
+    container_name: db
     image: ghcr.io/baosystems/postgis:17-3.5
     platform: linux/arm64
     env_file: ".env"
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./rnb_to_osm/data:/app/rnb_to_osm/data/
@@ -15,9 +14,8 @@ services:
       retries: 3
 
   app:
+    container_name: app
     build: .
-    ports:
-      - "5000:5000"
     env_file: ".env"
     depends_on:
       db:
@@ -26,5 +24,34 @@ services:
       - ./tmp:/app/tmp
       - ./rnb_to_osm/data:/app/rnb_to_osm/data/
 
+  nginx-proxy:
+    container_name: nginx-proxy
+    image: nginxproxy/nginx-proxy
+    labels:
+      - com.github.nginx-proxy.nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - app
+    volumes:
+      - certs:/etc/nginx/certs
+      - html:/usr/share/nginx/html
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+
+  nginx-proxy-acme:
+    image: nginxproxy/acme-companion
+    env_file: ".env"
+    depends_on:
+      - nginx-proxy
+    volumes:
+      - acme:/etc/acme.sh
+      - certs:/etc/nginx/certs
+      - html:/usr/share/nginx/html
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
 volumes:
   postgres_data:
+  certs:
+  html:
+  acme:
