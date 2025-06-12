@@ -12,6 +12,9 @@ class Config:
     
     # Secret key for sessions (you should change this in production)
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
+    
+    # Sentry configuration
+    SENTRY_DSN = os.environ.get('SENTRY_DSN')
 
 class DevelopmentConfig(Config):
     DEBUG = True
