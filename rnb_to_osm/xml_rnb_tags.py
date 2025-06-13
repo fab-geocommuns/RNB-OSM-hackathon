@@ -14,9 +14,7 @@ class OSMIDInfo(TypedDict):
 
 def build_osm_to_rnb_ids_map(code_insee: str) -> dict[str, OSMIDInfo]:
     # Read from database
-    print(f"Reading matched buildings from database for {code_insee}")
     with app.app_context():
-        print(f"Acquiring session on database")
         matched_buildings = (
             db.session.query(MatchedBuilding).filter_by(code_insee=code_insee).all()
         )

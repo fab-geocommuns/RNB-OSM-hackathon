@@ -28,42 +28,42 @@ def compute_matches(export: Export, code_insee: str) -> None:
 
     cache_file_path = f"tmp/overpass_xml_{today}_{code_insee}.xml"
     if os.path.exists(cache_file_path):
-        print(f"Using cached overpass xml from {cache_file_path}")
+        app.logger.info(f"Using cached overpass xml from {cache_file_path}")
         with open(cache_file_path, "r") as f:
             xml = f.read()
     else:
-        print(
+        app.logger.info(
             f"Not in cache. Getting overpass xml for {code_insee} ({bbox_for_overpass})"
         )
         xml = get_overpass_xml(bbox_for_overpass)
         with open(cache_file_path, "w") as f:
             f.write(xml)
 
-    print(f"Converting overpass xml to osm buildings")
+    app.logger.info(f"Converting overpass xml to osm buildings")
     osm_buildings = get_buildings_from_overpass_xml(xml)
-    print(f"Importing {len(osm_buildings)} osm buildings to table")
+    app.logger.info(f"Importing {len(osm_buildings)} osm buildings to table")
     import_osm_buildings_to_table(code_insee, osm_buildings)
 
-    print(f"Generating matches")
+    app.logger.info(f"Generating matches")
     generate_matches(code_insee)
-    print(f"Preparing xml with rnb tags")
+    app.logger.info(f"Preparing xml with rnb tags")
     new_xml = prepare_xml_with_rnb_tags(code_insee, xml)
-    print(f"Writing result to {export.export_file_path()}")
+    app.logger.info(f"Writing result to {export.export_file_path()}")
     with open(export.export_file_path(), "w") as f:
         f.write(new_xml)
-    print(f"Wrote result to {export.export_file_path()}")
+    app.logger.info(f"Wrote result to {export.export_file_path()}")
 
 
 def import_osm_buildings_to_table(
     code_insee: str, osm_buildings: list[TransientOSMBuilding]
 ) -> None:
     with app.app_context():
+        # Remove existing buildings with the same code_insee
+        db.session.execute(
+            text("DELETE FROM osm_buildings WHERE code_insee = :code_insee"),
+            {"code_insee": code_insee},
+        )
         for building in osm_buildings:
-            # Remove existing buildings with the same code_insee
-            db.session.execute(
-                text("DELETE FROM osm_buildings WHERE code_insee = :code_insee"),
-                {"code_insee": code_insee},
-            )
             db.session.add(
                 OSMBuilding(
                     id=building["id"],

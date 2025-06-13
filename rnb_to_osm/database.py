@@ -108,11 +108,11 @@ def init_database(app: Flask) -> SQLAlchemy:
         reset_db = os.environ.get("RESET_DB", "").lower() in ("true", "1", "yes")
 
         if reset_db:
-            print("RESET_DB is set - dropping and recreating tables...")
+            app.logger.info("RESET_DB is set - dropping and recreating tables...")
             db.drop_all()
             db.create_all()
             import_rnb_buildings(db)
-            print("Database tables reset successfully")
+            app.logger.info("Database tables reset successfully")
         else:
             db.create_all()
 
