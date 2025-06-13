@@ -262,18 +262,38 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    downloadFile(data.result);
+                    currentExportId = data.export_id;
+                    pollStatus();
                 } else {
                     console.error(data);
                     showStatus(`Error: ${data.message}`, 'error');
+                    resetButton();
                 }
-                resetButton();
 
             } catch (error) {
                 showStatus(`Error: ${error.message}`, 'error');
                 resetButton();
             }
         }
+
+        async function pollStatus() {
+            const response = await fetch(`/export/${currentExportId}`);
+            const data = await response.json();
+            if (data.status === 'finished') {
+                downloadFile(data.result);
+                resetButton();
+                return;
+            }
+
+            if (data.status === 'failed') {
+                showStatus(`Error: ${data.message}`, 'error');
+                resetButton();
+                return;
+            }
+
+            setTimeout(pollStatus, 5000);
+        }
+
 
         function resetButton() {
             const btn = document.getElementById('exportBtn');

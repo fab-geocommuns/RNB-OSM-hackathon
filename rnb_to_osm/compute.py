@@ -39,16 +39,19 @@ def compute_matches(export: Export, code_insee: str) -> None:
         with open(cache_file_path, "w") as f:
             f.write(xml)
 
+    print(f"Converting overpass xml to osm buildings")
     osm_buildings = get_buildings_from_overpass_xml(xml)
+    print(f"Importing {len(osm_buildings)} osm buildings to table")
     import_osm_buildings_to_table(code_insee, osm_buildings)
 
+    print(f"Generating matches")
     generate_matches(code_insee)
+    print(f"Preparing xml with rnb tags")
     new_xml = prepare_xml_with_rnb_tags(code_insee, xml)
+    print(f"Writing result to {export.export_file_path()}")
     with open(export.export_file_path(), "w") as f:
         f.write(new_xml)
     print(f"Wrote result to {export.export_file_path()}")
-
-    export.finish()
 
 
 def import_osm_buildings_to_table(
@@ -59,7 +62,7 @@ def import_osm_buildings_to_table(
             # Remove existing buildings with the same code_insee
             db.session.execute(
                 text("DELETE FROM osm_buildings WHERE code_insee = :code_insee"),
-                {"code_insee": code_insee}
+                {"code_insee": code_insee},
             )
             db.session.add(
                 OSMBuilding(

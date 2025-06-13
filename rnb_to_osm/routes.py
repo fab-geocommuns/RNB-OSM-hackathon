@@ -1,8 +1,9 @@
 from flask import render_template, jsonify, request
-from rnb_to_osm.database import Export
+from rnb_to_osm.database import Export, db
 from rnb_to_osm.cities import City
 from rnb_to_osm.compute import compute_matches
 from rnb_to_osm import app
+from threading import Thread
 
 
 @app.route("/")
@@ -36,19 +37,41 @@ def trigger_export():
     except ValueError as e:
         return jsonify({"status": "error", "message": str(e)}), 400
 
+    def _worker(export_id: int, code_insee: str):
+        with app.app_context():
+            export = Export.query.get(export_id)
+            export.start()
+            try:
+                compute_matches(export, code_insee)
+                export.finish()
+            except Exception:
+                export.fail()
+
     with app.app_context():
         export = Export(code_insee)
-        export.start()
-        compute_matches(export, code_insee)
+        db.session.add(export)
+        db.session.commit()
+        Thread(target=_worker, args=(export.id, code_insee), daemon=True).start()
 
     # Return task ID for tracking
     return (
         jsonify(
             {
                 "status": "success",
-                "message": "Export task successful",
-                "result": export.export_file_content(),
+                "message": "Export task started",
+                "export_id": export.id,
             }
         ),
         202,
     )
+
+
+@app.route("/export/<int:export_id>", methods=["GET"])
+def get_export(export_id: int):
+    export = Export.query.get(export_id)
+    if not export:
+        return jsonify({"status": "error", "message": "Export not found"}), 404
+    status = export.status
+    if status == "done":
+        return jsonify({"status": status, "result": export.export_file_content()})
+    return jsonify({"status": status})

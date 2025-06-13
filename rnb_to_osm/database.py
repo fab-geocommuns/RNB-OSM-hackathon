@@ -1,6 +1,6 @@
 import os
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import String, Integer, ARRAY, Float, DateTime
+from sqlalchemy import String, Integer, Float, DateTime
 from sqlalchemy.orm import Mapped, mapped_column
 from geoalchemy2 import Geometry
 from flask import Flask
@@ -73,8 +73,13 @@ class Export(db.Model):
         self.updated_at = datetime.now()
         db.session.commit()
 
+    def fail(self):
+        self.status = "failed"
+        self.updated_at = datetime.now()
+        db.session.commit()
+
     def export_file_path(self) -> str:
-        return f"tmp/export_{self.code_insee}.osm"
+        return f"tmp/export_{self.id}_{self.code_insee}.osm"
 
     def export_file_content(self) -> str:
         with open(self.export_file_path(), "r") as f:

@@ -1,4 +1,4 @@
-from rnb_to_osm import db
+from rnb_to_osm import db, app
 from rnb_to_osm.database import MatchedBuilding
 from typing import TypedDict
 import xml.etree.ElementTree as xml
@@ -14,9 +14,11 @@ class OSMIDInfo(TypedDict):
 
 def build_osm_to_rnb_ids_map(code_insee: str) -> dict[str, OSMIDInfo]:
     # Read from database
-    with db.session() as session:
+    print(f"Reading matched buildings from database for {code_insee}")
+    with app.app_context():
+        print(f"Acquiring session on database")
         matched_buildings = (
-            session.query(MatchedBuilding).filter_by(code_insee=code_insee).all()
+            db.session.query(MatchedBuilding).filter_by(code_insee=code_insee).all()
         )
         osm_to_rnb_ids = {}
         for matched_building in matched_buildings:
@@ -98,7 +100,9 @@ def is_heavy_building(xml_node: xml.Element) -> bool:
 
 def prepare_xml_with_rnb_tags(code_insee: str, xml_str: str) -> str:
     osm_to_rnb_ids = build_osm_to_rnb_ids_map(code_insee)
-    new_document = xml.Element("osm", version="0.6", generator="hackathon/20.05.2025")
+    new_document = xml.Element(
+        "osm", version="0.6", generator="rnb-to-osm/hackathon-beta"
+    )
     for xml_node in list_xml_osm_subnodes(xml_str):
         if xml_node.tag == "node" or xml_node.tag == "note" or xml_node.tag == "meta":
             # Do not touch

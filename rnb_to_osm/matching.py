@@ -2,20 +2,25 @@ from rnb_to_osm import app, db
 from sqlalchemy import text
 
 
-def generate_matches(code_insee: str) -> None:
+def execute_query(query: str, params: dict) -> None:
     with app.app_context():
-        db.session.execute(
-            text("DELETE FROM matched_buildings WHERE code_insee = :code_insee").params(
-                code_insee=code_insee
-            )
-        )
-        db.session.execute(
-            text(
-                "INSERT INTO matched_buildings(code_insee, osm_id, rnb_ids, score, diff) "
-                + match_function()
-            ).params(code_insee=code_insee)
-        )
+        if app.config.get("DEBUG"):
+            print(query)
+            print(params)
+        db.session.execute(text(query).params(params))
         db.session.commit()
+
+
+def generate_matches(code_insee: str) -> None:
+    execute_query(
+        "DELETE FROM matched_buildings WHERE code_insee = :code_insee",
+        {"code_insee": code_insee},
+    )
+    execute_query(
+        "INSERT INTO matched_buildings(code_insee, osm_id, rnb_ids, score, diff) "
+        + match_function(),
+        {"code_insee": code_insee},
+    )
 
 
 def match_function() -> str:
