@@ -72,6 +72,13 @@ def get_export(export_id: int):
     if not export:
         return jsonify({"status": "error", "message": "Export not found"}), 404
     status = export.status
-    if status == "done":
+
+    if status == "finished":
         return jsonify({"status": status, "result": export.export_file_content()})
-    return jsonify({"status": status})
+    if status == "failed":
+        return jsonify({"status": status, "message": "Export failed"})
+    if status == "running":
+        return jsonify({"status": status, "message": "Export running"})
+    if status == "pending":
+        return jsonify({"status": status, "message": "Export pending"})
+    raise ValueError(f"Unknown status: {status}")
