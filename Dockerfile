@@ -1,7 +1,10 @@
 FROM python:3.13-slim-bullseye
 
+
 # Set working directory
 WORKDIR /app
+
+COPY --from=ghcr.io/astral-sh/uv:0.7.13 /uv /uvx /usr/local/bin/
 
 # Install system dependencies for PostGIS and spatial libraries
 RUN apt-get update && apt-get install -y \
@@ -13,11 +16,13 @@ RUN apt-get update && apt-get install -y \
     libgdal-dev \
     libspatialindex-dev
 
-# Copy requirements first for better caching
-COPY requirements.txt .
+COPY uv.lock .
+COPY pyproject.toml .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install dependencies in a virtual environment
+RUN uv venv && \
+    . .venv/bin/activate && \
+    uv sync
 
 # Copy application code
 COPY . .
@@ -31,6 +36,7 @@ EXPOSE 5000
 # Set environment variables
 ENV FLASK_ENV=production
 ENV PYTHONPATH=/app
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Run the application
-CMD ["python", "run.py", "run"]
+CMD ["uv", "run", "python", "run.py", "run"]
