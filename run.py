@@ -3,6 +3,7 @@ from rnb_to_osm import app
 import argparse
 from rnb_to_osm.matching import match_function
 from sqlalchemy import text
+import uvicorn
 
 
 # Placeholder functions
@@ -26,11 +27,17 @@ def run():
         print("FLASK_ENV is not set. Please set it to 'development' or 'production'.")
         return
 
-    app.run(
-        debug=env == "development",
-        host="0.0.0.0",
-        port=os.environ.get("PORT", 5000),
-    )
+    if env == "development":
+        app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+    else:
+        uvicorn.run(
+            "rnb_to_osm:app",
+            host="0.0.0.0",
+            port=int(os.environ.get("PORT", 5000)),
+            workers=int(os.environ.get("WEB_CONCURRENCY", 4)),
+            proxy_headers=True,
+            forwarded_allow_ips="*",
+        )
 
 
 def main():

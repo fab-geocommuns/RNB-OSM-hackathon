@@ -37,6 +37,7 @@ EXPOSE 5000
 ENV FLASK_ENV=production
 ENV PYTHONPATH=/app
 ENV PATH="/app/.venv/bin:$PATH"
+ENV WEB_CONCURRENCY=4
 
-# Run the application
-CMD ["uv", "run", "python", "run.py", "run"]
+# Run the application using Uvicorn
+CMD ["uvicorn", "rnb_to_osm:app", "--host", "0.0.0.0", "--port", "5000", "--proxy-headers", "--forwarded-allow-ips", "*"]
