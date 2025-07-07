@@ -1,7 +1,13 @@
-FROM python:3.13-slim-bullseye
+# Build stage
+FROM python:3.13-slim-bullseye AS builder
 
+# Set environment variables
+ENV FLASK_ENV=production
+ENV PYTHONPATH=/app
+ENV PATH="/app/.venv/bin:$PATH"
 
-# Set working directory
+RUN groupadd app && useradd --create-home --gid app app
+
 WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:0.7.13 /uv /uvx /usr/local/bin/
@@ -16,27 +22,27 @@ RUN apt-get update && apt-get install -y \
     libgdal-dev \
     libspatialindex-dev
 
-COPY uv.lock .
-COPY pyproject.toml .
+COPY uv.lock pyproject.toml ./
 
-# Install dependencies in a virtual environment
-RUN uv venv && \
-    . .venv/bin/activate && \
-    uv sync
-
-# Copy application code
-COPY . .
-
-# Create tmp directory for exports
+RUN uv venv --relocatable
+RUN uv sync --frozen --no-install-project
 RUN mkdir -p tmp
 
-# Expose port
-EXPOSE 5000
 
-# Set environment variables
-ENV FLASK_ENV=production
-ENV PYTHONPATH=/app
+FROM python:3.13-slim-bullseye
+
+# Create user
+RUN groupadd app && useradd --create-home --gid app app
+WORKDIR /app
+
+# Copy from build
+COPY --chown=app:app . /app
+COPY --chown=app:app --from=builder /app/.venv /app/.venv
+COPY --chown=app:app --from=builder /app/tmp /app/tmp
+
+ENV VIRTUAL_ENV=/app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Run the application
-CMD ["uv", "run", "python", "run.py", "run"]
+USER app
+
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 1 --threads 8 rnb_to_osm:app"]

@@ -14,4 +14,5 @@ dependencies = [
     "requests>=2.32.4",
     "sentry-sdk>=2.30.0",
     "shapely>=2.1.1",
+    "gunicorn>=21.2.0",
 ]
