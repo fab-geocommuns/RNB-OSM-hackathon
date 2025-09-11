@@ -91,9 +91,26 @@ def import_rnb_buildings(db: SQLAlchemy) -> None:
     db.session.execute(
         text(
             f"""
-            COPY rnb_buildings(rnb_id, shape) FROM '{current_dir}/data/RNB_nat_stripped_cut.csv'
-            WITH (FORMAT CSV, DELIMITER ',', HEADER TRUE, ENCODING 'UTF8');
+            DROP TABLE IF EXISTS rnb_buildings_temp;
+            CREATE TABLE rnb_buildings_temp(rnb_id VARCHAR(12), point GEOMETRY, shape GEOMETRY, status TEXT, ext_ids TEXT, addresses TEXT, plots TEXT);
         """
+        )
+    )
+    db.session.commit()
+    with open(f"/app/tmp/RNB_nat.csv", "r") as f:
+        connection = db.engine.raw_connection()
+        cursor = connection.cursor()
+        cursor.copy_expert(
+            "COPY rnb_buildings_temp FROM STDIN WITH (FORMAT CSV, DELIMITER ';', HEADER TRUE, ENCODING 'UTF8')",
+            f,
+        )
+        connection.commit()
+    db.session.execute(
+        text(
+            f"""
+            INSERT INTO rnb_buildings(rnb_id, shape) SELECT rnb_id, shape FROM rnb_buildings_temp;
+            DROP TABLE rnb_buildings_temp;
+            """
         )
     )
     db.session.commit()
