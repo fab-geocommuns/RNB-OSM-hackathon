@@ -12,11 +12,11 @@ class OSMIDInfo(TypedDict):
     diff: str
 
 
-def build_osm_to_rnb_ids_map(code_insee: str) -> dict[str, OSMIDInfo]:
+def build_osm_to_rnb_ids_map(export_id: int) -> dict[str, OSMIDInfo]:
     # Read from database
     with app.app_context():
         matched_buildings = (
-            db.session.query(MatchedBuilding).filter_by(code_insee=code_insee).all()
+            db.session.query(MatchedBuilding).filter_by(export_id=export_id).all()
         )
         osm_to_rnb_ids = {}
         for matched_building in matched_buildings:
@@ -96,8 +96,8 @@ def is_heavy_building(xml_node: xml.Element) -> bool:
     return valid_building and has_walls
 
 
-def prepare_xml_with_rnb_tags(code_insee: str, xml_str: str) -> str:
-    osm_to_rnb_ids = build_osm_to_rnb_ids_map(code_insee)
+def prepare_xml_with_rnb_tags(export_id: int, xml_str: str) -> str:
+    osm_to_rnb_ids = build_osm_to_rnb_ids_map(export_id)
     new_document = xml.Element(
         "osm", version="0.6", generator="rnb-to-osm/hackathon-beta"
     )
