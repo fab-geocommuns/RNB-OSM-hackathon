@@ -101,6 +101,40 @@
             color: #856404;
             border: 1px solid #ffeaa7;
         }
+
+        .tab-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .tab-button {
+            border: none;
+            background: none;
+            border-bottom: 1px solid #ccc;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            text-decoration: none;
+            height: 40px;
+        }
+
+        .tab-button:hover {
+            text-decoration: underline;
+        }
+
+        .tab-button.active {
+            border-bottom: 1px solid #007bff;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
     </style>
 </head>
 
@@ -130,14 +164,19 @@
                 n'hésitez pas à demander de l'aide <a
                     href="https://forum.openstreetmap.fr/" rel="noreferrer" target="_blank">sur le forum</a>.</p>
         </blockquote>
-        <p>Sélectionnez un département et une ville pour exporter les données:</p>
 
-        <select placeholder="Département" id="departmentSelect" style="min-width: 100px;">
-        </select>
-        <select placeholder="Ville" id="citySelect" style="min-width: 250px;">
-        </select>
-        <button id="exportBtn" class="button" onclick="triggerExport()">Exporter</button>
-        <div id="status"></div>
+        <div class="tab-group">
+            <div class="tab-buttons">
+                <button class="tab-button" onclick="showTab('city')" id="tab-button-city">Par ville</button>
+                <button class="tab-button" onclick="showTab('bbox')" id="tab-button-bbox">Par secteur géographique</button>
+            </div>
+            <div class="export-form tab-content" id="tab-content-city">
+                {% include 'export_form_city.html' %}
+            </div>
+            <div class="export-form tab-content" id="tab-content-bbox">
+                {% include 'export_form_bbox.html' %}
+            </div>
+        </div>
         <p><span></span><span>🚧</span></span> N.B. 10 juin 2025 : ce service d'export de données est en bêta-test. Vos
             propositions d'améliorations sont les bienvenues <a
                 href="https://forum.openstreetmap.fr/" rel="noreferrer" target="_blank">sur le forum</a>.</p>
@@ -200,127 +239,25 @@
     
     </div>
 
+
     <script>
-        const departmentSelect = document.getElementById('departmentSelect');
-        const citySelect = document.getElementById('citySelect');
-
-        const cities = {{ cities | tojson }};
-        const departmentsToCities = {};
-        cities.forEach(city => {
-            const department = city.code_insee.slice(0, 2);
-            if (!departmentsToCities[department]) {
-                departmentsToCities[department] = [];
-            }
-            departmentsToCities[department].push(city);
-        });
-        const departments = Object.keys(departmentsToCities).sort();
-        departments.forEach(department => {
-            const option = document.createElement('option');
-            option.value = department;
-            option.textContent = department;
-            departmentSelect.appendChild(option);
-        });
-        departmentSelect.value = '00';
-        citySelect.value = '00000';
-
-        departmentSelect.addEventListener('change', () => {
-            const department = departmentSelect.value;
-            const cities = departmentsToCities[department];
-            citySelect.innerHTML = '';
-            cities.forEach(city => {
-                const option = document.createElement('option');
-                option.value = city.code_insee;
-                option.textContent = city.label;
-                citySelect.appendChild(option);
-            });
-        });
+        {% include 'export.js' %}
     </script>
-
     <script>
-        let currentExportId = null;
-        let statusInterval = null;
+        function showTab(tab) {
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => content.classList.remove('active'));
+            document.getElementById(`tab-content-${tab}`).classList.add('active');
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => button.classList.remove('active'));
+            document.getElementById(`tab-button-${tab}`).classList.add('active');
 
-        async function triggerExport() {
-            const citySelect = document.getElementById('citySelect');
-            const codeInsee = citySelect.value;
-            const btn = document.getElementById('exportBtn');
-            const status = document.getElementById('status');
-
-            btn.disabled = true;
-            btn.textContent = 'En cours...';
-            hideStatus();
-
-            try {
-                const response = await fetch('/export', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ code_insee: codeInsee })
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    currentExportId = data.export_id;
-                    pollStatus();
-                } else {
-                    console.error(data);
-                    showStatus(`Error: ${data.message}`, 'error');
-                    resetButton();
-                }
-
-            } catch (error) {
-                showStatus(`Error: ${error.message}`, 'error');
-                resetButton();
+            if (tab === 'bbox') {
+                initMap();
             }
         }
 
-        async function pollStatus() {
-            const response = await fetch(`/export/${currentExportId}`);
-            const data = await response.json();
-            if (data.status === 'finished') {
-                downloadFile(data.result);
-                resetButton();
-                return;
-            }
-
-            if (data.status === 'failed') {
-                showStatus(`Error: ${data.message}`, 'error');
-                resetButton();
-                return;
-            }
-
-            setTimeout(pollStatus, 5000);
-        }
-
-
-        function resetButton() {
-            const btn = document.getElementById('exportBtn');
-            btn.disabled = false;
-            btn.textContent = 'Exporter';
-        }
-
-        function downloadFile(content) {
-            const blob = new Blob([content], { type: 'application/xml' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'export.osm';
-            a.click();
-        }
-
-        function hideStatus() {
-            const status = document.getElementById('status');
-            status.style.display = 'none';
-        }
-
-        function showStatus(message, type) {
-            const status = document.getElementById('status');
-            status.textContent = message;
-            status.className = `status-${type}`;
-            status.style.display = 'block';
-        }
+        showTab('bbox');
     </script>
 </body>
 

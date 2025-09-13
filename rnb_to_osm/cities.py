@@ -2,6 +2,7 @@ import json
 from shapely import Geometry
 from rnb_to_osm.utils import shape_from_wkt
 from pathlib import Path
+from shapely import bounds
 
 JSON_FILE = "data/cities.json"
 
@@ -29,6 +30,9 @@ class City:
         if City._cached_cities is None:
             City._cached_cities = get_cities()
         return City._cached_cities[code_insee]
+
+    def bbox(self):
+        return list(bounds(self.shape))
 
     def __str__(self) -> str:
         return f"{self.name} ({self.code_insee})"

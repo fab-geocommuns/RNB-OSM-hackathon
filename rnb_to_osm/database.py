@@ -1,13 +1,13 @@
 import os
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import String, Integer, Float, DateTime
+from sqlalchemy import String, Integer, Float, DateTime, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 from geoalchemy2 import Geometry
 from flask import Flask
 from pathlib import Path
 from sqlalchemy import text
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TypedDict
 
 db = SQLAlchemy()
 
@@ -16,7 +16,6 @@ class RNBBuilding(db.Model):
     __tablename__ = "rnb_buildings"
 
     rnb_id: Mapped[str] = mapped_column(String, primary_key=True, nullable=False)
-    code_insee: Mapped[str] = mapped_column(String, nullable=True, index=True)
     shape: Mapped[str] = mapped_column(Geometry("GEOMETRY", srid=4326), nullable=False)
 
     def __repr__(self):
@@ -28,7 +27,7 @@ class OSMBuilding(db.Model):
 
     unused_pk: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
     id: Mapped[int] = mapped_column(Integer, nullable=False)
-    code_insee: Mapped[str] = mapped_column(String, nullable=True, index=True)
+    export_id: Mapped[int] = mapped_column(Integer, nullable=True, index=True)
     shape: Mapped[str] = mapped_column(Geometry("GEOMETRY", srid=4326), nullable=False)
 
     def __repr__(self):
@@ -39,17 +38,22 @@ class MatchedBuilding(db.Model):
     __tablename__ = "matched_buildings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
-    code_insee: Mapped[str] = mapped_column(String, nullable=True, index=True)
+    export_id: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
     osm_id: Mapped[str] = mapped_column(String, nullable=False)
     rnb_ids: Mapped[str] = mapped_column(String, nullable=False)
     score: Mapped[float] = mapped_column(Float, nullable=False)
     diff: Mapped[Optional[str]] = mapped_column(String, nullable=True)
 
 
+class ExportParams(TypedDict):
+    bbox: list[float] | None
+    code_insee: str | None
+
+
 class Export(db.Model):
     __tablename__ = "exports"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, nullable=False)
-    code_insee: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    export_params: Mapped[ExportParams] = mapped_column(JSON, nullable=False)
     status: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
@@ -57,8 +61,8 @@ class Export(db.Model):
     def __repr__(self):
         return f"<Export {self.id}>"
 
-    def __init__(self, code_insee: str):
-        self.code_insee = code_insee
+    def __init__(self, export_params: ExportParams):
+        self.export_params = export_params
         self.status = "pending"
         self.created_at = datetime.now()
         self.updated_at = datetime.now()
@@ -78,12 +82,28 @@ class Export(db.Model):
         self.updated_at = datetime.now()
         db.session.commit()
 
+    def export_file_name(self) -> str:
+        if (
+            "code_insee" in self.export_params
+            and self.export_params["code_insee"] is not None
+        ):
+            return f"export_{self.id}_{self.export_params['code_insee']}.osm"
+        elif "bbox" in self.export_params and self.export_params["bbox"] is not None:
+            return f"export_{self.id}_{self.created_at}.osm"
+        else:
+            raise ValueError("Code INSEE or bbox is required")
+
     def export_file_path(self) -> str:
-        return f"tmp/export_{self.id}_{self.code_insee}.osm"
+        return f"tmp/{self.export_file_name()}"
 
     def export_file_content(self) -> str:
         with open(self.export_file_path(), "r") as f:
             return f.read()
+
+    def bbox_str(self) -> str:
+        if self.export_params["bbox"] is None:
+            raise ValueError("Bbox is required")
+        return "_".join(str(x) for x in self.export_params["bbox"])
 
 
 def import_rnb_buildings(db: SQLAlchemy) -> None:

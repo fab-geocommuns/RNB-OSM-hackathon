@@ -1,0 +1,21 @@
+<p>Zoomez sur la carte pour exporter les données correspondantes:</p>
+
+<div id="map" style="aspect-ratio: 1 / 1; width: 100%;"></div>
+<button class="exportBtn" class="button" onclick="triggerBBoxExport()">Exporter</button>
+<div class="status"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
+<script>
+    function initMap() {
+        if (window.map && window.map.loaded) {
+            return;
+        }
+        const topLeft = { lat: 50.47130977304344, lng: 8.19595311578315 };
+        const zoom = 7;
+        window.map = L.map('map').setView([topLeft.lat, topLeft.lng], zoom);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(window.map);
+    }
+</script>
