@@ -92,6 +92,18 @@ wheels = [
 ]
 
 [[package]]
+name = "flask-crontab"
+version = "0.1.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "flask" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a3/8d/bb417566d4890769fc5c1dd6d7ffd2e2d6cfa65b9005060661714e76ccc1/flask-crontab-0.1.2.tar.gz", hash = "sha256:ec38074d7b5237df31b406576e9ccc79c924d8363dcba4e857830c4ec63a1185", size = 6774, upload-time = "2020-01-19T03:58:19.242Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7a/b5/3d691df17797770ab531f8fd43b8ac99c40b8163baae1aa7bc7701bcc6d6/flask_crontab-0.1.2-py2.py3-none-any.whl", hash = "sha256:8dbb325417d9c04d13c94f1f933c97267e0ef7a4358e08057dbb9910f0145188", size = 6883, upload-time = "2020-01-19T03:58:17.668Z" },
+]
+
+[[package]]
 name = "flask-sqlalchemy"
 version = "3.1.1"
 source = { registry = "https://pypi.org/simple" }
@@ -297,6 +309,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "dotenv" },
     { name = "flask" },
+    { name = "flask-crontab" },
     { name = "flask-sqlalchemy" },
     { name = "geoalchemy2" },
     { name = "overpy" },
@@ -310,6 +323,7 @@ dependencies = [
 requires-dist = [
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "flask", specifier = ">=3.1.1" },
+    { name = "flask-crontab", specifier = ">=0.1.2" },
     { name = "flask-sqlalchemy", specifier = ">=3.1.1" },
     { name = "geoalchemy2", specifier = ">=0.17.1" },
     { name = "overpy", specifier = ">=0.7" },

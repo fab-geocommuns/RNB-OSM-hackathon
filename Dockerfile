@@ -14,7 +14,8 @@ RUN apt-get update && apt-get install -y \
     libgeos-dev \
     libproj-dev \
     libgdal-dev \
-    libspatialindex-dev
+    libspatialindex-dev \
+    cron
 
 COPY uv.lock .
 COPY pyproject.toml .
@@ -30,13 +31,12 @@ COPY . .
 # Create tmp directory for exports
 RUN mkdir -p tmp
 
-# Expose port
-EXPOSE 5000
-
 # Set environment variables
 ENV FLASK_ENV=production
 ENV PYTHONPATH=/app
 ENV PATH="/app/.venv/bin:$PATH"
+
+RUN uv run flask --app rnb_to_osm crontab add
 
 # Run the application
 CMD ["uv", "run", "python", "run.py", "run"]

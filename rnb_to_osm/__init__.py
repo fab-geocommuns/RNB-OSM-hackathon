@@ -3,6 +3,7 @@ import sentry_sdk
 from flask import Flask
 from rnb_to_osm.config import config
 from rnb_to_osm.database import init_database
+from rnb_to_osm.cron import init_crontab
 
 app = Flask(__name__)
 
@@ -14,7 +15,7 @@ app.config.from_object(config[config_name])
 if app.config.get("SENTRY_DSN"):
     sentry_sdk.init(dsn=app.config["SENTRY_DSN"])
 
-# Initialize SQLAlchemy
+init_crontab(app)
 db = init_database(app)
 
 from rnb_to_osm.routes import *

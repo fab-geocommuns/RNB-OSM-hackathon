@@ -105,6 +105,14 @@ class Export(db.Model):
             raise ValueError("Bbox is required")
         return "_".join(str(x) for x in self.export_params["bbox"])
 
+    def cleanup(self) -> None:
+        if os.path.exists(self.export_file_path()):
+            os.remove(self.export_file_path())
+        MatchedBuilding.query.filter_by(export_id=self.id).delete()
+        OSMBuilding.query.filter_by(export_id=self.id).delete()
+        self.delete()
+        db.session.commit()
+
 
 def import_rnb_buildings(db: SQLAlchemy) -> None:
     current_dir = Path(__file__).parent

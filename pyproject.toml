@@ -7,6 +7,7 @@ requires-python = ">=3.13"
 dependencies = [
     "dotenv>=0.9.9",
     "flask>=3.1.1",
+    "flask-crontab>=0.1.2",
     "flask-sqlalchemy>=3.1.1",
     "geoalchemy2>=0.17.1",
     "overpy>=0.7",
