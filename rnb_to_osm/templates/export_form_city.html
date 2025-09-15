@@ -1,0 +1,46 @@
+<div class="export-form-city">
+    <p>Sélectionnez un département et une ville pour exporter les données:</p>
+
+    <select placeholder="Département" id="departmentSelect" style="min-width: 100px;">
+    </select>
+    <select placeholder="Ville" id="citySelect" style="min-width: 250px;">
+    </select>
+    <button class="exportBtn button" onclick="triggerCityExport()">Exporter</button>
+    <div class="status"></div>
+</div>
+
+<script>
+    const departmentSelect = document.getElementById('departmentSelect');
+    const citySelect = document.getElementById('citySelect');
+
+    const cities = {{ cities | tojson }};
+    const departmentsToCities = {};
+    cities.forEach(city => {
+        const department = city.code_insee.slice(0, 2);
+        if (!departmentsToCities[department]) {
+            departmentsToCities[department] = [];
+        }
+        departmentsToCities[department].push(city);
+    });
+    const departments = Object.keys(departmentsToCities).sort();
+    departments.forEach(department => {
+        const option = document.createElement('option');
+        option.value = department;
+        option.textContent = department;
+        departmentSelect.appendChild(option);
+    });
+    departmentSelect.value = '00';
+    citySelect.value = '00000';
+
+    departmentSelect.addEventListener('change', () => {
+        const department = departmentSelect.value;
+        const cities = departmentsToCities[department];
+        citySelect.innerHTML = '';
+        cities.forEach(city => {
+            const option = document.createElement('option');
+            option.value = city.code_insee;
+            option.textContent = city.label;
+            citySelect.appendChild(option);
+        });
+    });
+</script>

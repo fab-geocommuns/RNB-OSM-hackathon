@@ -1,9 +1,15 @@
 from flask import render_template, jsonify, request
-from rnb_to_osm.database import Export, db
+from rnb_to_osm.validations import ValidationError, validate_code_insee, validate_bbox
+from rnb_to_osm.database import Export, db, ExportParams
 from rnb_to_osm.cities import City
 from rnb_to_osm.compute import compute_matches
 from rnb_to_osm import app
 from threading import Thread
+
+
+@app.errorhandler(ValidationError)
+def handle_bad_request(e):
+    return jsonify({"status": "error", "message": str(e)}), 400
 
 
 @app.route("/")
@@ -18,40 +24,40 @@ def index():
     return render_template("index.html", cities=cities)
 
 
-def validate_code_insee(code_insee: str) -> None:
-    if not code_insee.isdigit() or len(code_insee) != 5:
-        raise ValueError("Code INSEE invalide")
-    if not City.get_by_code_insee(code_insee):
-        raise ValueError(f"Ville avec code INSEE {code_insee} non trouvée")
-
-
 @app.route("/export", methods=["POST"])
 def trigger_export():
     """
     POST endpoint to trigger the async prepare_export task
     """
     code_insee = request.get_json().get("code_insee")
+    bbox = request.get_json().get("bbox")
 
-    try:
+    if code_insee is None and bbox is None:
+        raise ValidationError("Code INSEE ou bbox est requis")
+
+    if bbox is not None:
+        validate_bbox(bbox)
+        export_params = {"bbox": bbox}
+    else:
         validate_code_insee(code_insee)
-    except ValueError as e:
-        return jsonify({"status": "error", "message": str(e)}), 400
+        export_params = {"code_insee": code_insee}
 
-    def _worker(export_id: int, code_insee: str):
+    def _worker(export_id: int, export_params: ExportParams):
         with app.app_context():
             export = Export.query.get(export_id)
             export.start()
             try:
-                compute_matches(export, code_insee)
+                compute_matches(export, export_params)
                 export.finish()
             except Exception:
                 export.fail()
+                raise
 
     with app.app_context():
-        export = Export(code_insee)
+        export = Export(export_params)
         db.session.add(export)
         db.session.commit()
-        Thread(target=_worker, args=(export.id, code_insee), daemon=True).start()
+        Thread(target=_worker, args=(export.id, export_params), daemon=True).start()
 
     # Return task ID for tracking
     return (
@@ -74,7 +80,13 @@ def get_export(export_id: int):
     status = export.status
 
     if status == "finished":
-        return jsonify({"status": status, "result": export.export_file_content()})
+        return jsonify(
+            {
+                "status": status,
+                "content": export.export_file_content(),
+                "filename": export.export_file_name(),
+            }
+        )
     if status == "failed":
         return jsonify({"status": status, "message": "Export failed"})
     if status == "running":

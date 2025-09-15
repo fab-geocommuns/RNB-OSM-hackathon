@@ -1,0 +1,22 @@
+<div class="export-form-bbox">
+    <p>Zoomez sur la carte pour exporter les données correspondantes à la zone visible.</p>
+
+    <div id="map" style="aspect-ratio: 1 / 1; width: 100%;"></div>
+    <button class="exportBtn button" onclick="triggerBBoxExport()">Exporter la zone visible</button>
+    <div class="status"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet">
+    <script>
+        function initMap() {
+            if (window.map && window.map.loaded) {
+                return;
+            }
+            const franceBbox = [[41.3902, -4.8926], [51.1605, 9.5579]];
+            window.map = L.map('map').fitBounds(franceBbox);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(window.map);
+        }
+    </script>
+</div>
