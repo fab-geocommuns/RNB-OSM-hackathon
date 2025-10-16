@@ -57,7 +57,7 @@ def trigger_export():
         export = Export(export_params)
         db.session.add(export)
         db.session.commit()
-        Thread(target=_worker, args=(export.id, export_params), daemon=True).start()
+        Thread(target=_worker, args=(export.id, export_params)).start()
 
     # Return task ID for tracking
     return (

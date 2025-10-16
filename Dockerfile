@@ -38,5 +38,5 @@ ENV FLASK_ENV=production
 ENV PYTHONPATH=/app
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Run the application
-CMD ["uv", "run", "python", "run.py", "run"]
+# Run the application with gunicorn
+CMD ["uv", "run", "gunicorn", "--bind", "0.0.0.0:7899", "--workers", "4", "--timeout", "120", "rnb_to_osm:app"]

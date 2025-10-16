@@ -9,6 +9,7 @@ dependencies = [
     "flask>=3.1.1",
     "flask-sqlalchemy>=3.1.1",
     "geoalchemy2>=0.17.1",
+    "gunicorn>=23.0.0",
     "overpy>=0.7",
     "psycopg2-binary>=2.9.10",
     "requests>=2.32.4",
