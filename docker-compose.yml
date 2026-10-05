@@ -2,8 +2,13 @@ services:
   db:
     container_name: db
     image: ghcr.io/baosystems/postgis:17-3.5
-    platform: linux/arm64
-    env_file: ".env"
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    command: postgres -c shared_buffers=2GB -c maintenance_work_mem=2GB -c max_wal_size=8GB
+    shm_size: 1gb
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -15,6 +20,7 @@ services:
   app:
     container_name: app
     build: .
+    restart: unless-stopped
     env_file: ".env"
     depends_on:
       db:
@@ -26,6 +32,7 @@ services:
   nginx-proxy:
     container_name: nginx-proxy
     image: nginxproxy/nginx-proxy
+    restart: unless-stopped
     labels:
       - com.github.nginx-proxy.nginx
     ports:
@@ -40,7 +47,9 @@ services:
 
   nginx-proxy-acme:
     image: nginxproxy/acme-companion
-    env_file: ".env"
+    restart: unless-stopped
+    environment:
+      DEFAULT_EMAIL: ${DEFAULT_EMAIL}
     depends_on:
       - nginx-proxy
     volumes:
