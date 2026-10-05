@@ -113,7 +113,7 @@ def import_rnb_buildings(db: SQLAlchemy) -> None:
         text(
             """
             DROP TABLE IF EXISTS rnb_buildings_temp;
-            CREATE TABLE rnb_buildings_temp(rnb_id VARCHAR(12), point GEOMETRY, shape GEOMETRY, status TEXT, ext_ids TEXT, addresses TEXT, plots TEXT);
+            CREATE TABLE rnb_buildings_temp(rnb_id VARCHAR(12), point GEOMETRY, shape GEOMETRY, status TEXT, ext_ids TEXT, addresses TEXT, plots TEXT, validated_by TEXT);
             """
         )
     )
@@ -135,6 +135,7 @@ def import_rnb_buildings(db: SQLAlchemy) -> None:
             ALTER TABLE rnb_buildings_temp DROP COLUMN ext_ids;
             ALTER TABLE rnb_buildings_temp DROP COLUMN addresses;
             ALTER TABLE rnb_buildings_temp DROP COLUMN plots;
+            ALTER TABLE rnb_buildings_temp DROP COLUMN validated_by;
             CREATE INDEX idx_rnb_buildings_shape ON rnb_buildings_temp USING gist (shape);
             ALTER TABLE rnb_buildings_temp RENAME TO rnb_buildings;
             """
