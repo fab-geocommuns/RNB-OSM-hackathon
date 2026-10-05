@@ -1,4 +1,4 @@
-FROM python:3.13-slim-bullseye
+FROM python:3.13-slim-bookworm
 
 
 # Set working directory
@@ -6,15 +6,8 @@ WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:0.7.13 /uv /uvx /usr/local/bin/
 
-# Install system dependencies for PostGIS and spatial libraries
-RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    libpq-dev \
-    libgeos-dev \
-    libproj-dev \
-    libgdal-dev \
-    libspatialindex-dev
+# No system packages needed: every dependency ships a manylinux wheel
+# (psycopg2-binary, shapely, numpy, greenlet) for amd64 and arm64.
 
 COPY uv.lock .
 COPY pyproject.toml .
