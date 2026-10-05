@@ -1,3 +1,4 @@
+import os
 import overpy
 from typing import Literal, TypedDict
 import requests
@@ -108,12 +109,30 @@ nwr[building]
         """
 
 
+OVERPASS_URL = os.environ.get("OVERPASS_URL", "https://overpass-api.de/api/interpreter")
+USER_AGENT = "rnb-to-osm (+https://github.com/fab-geocommuns/RNB-OSM-hackathon)"
+
+
+class OverpassError(RuntimeError):
+    pass
+
+
 def get_overpass_xml(bbox: list[float]) -> str:
     query = get_overpass_query(bbox)
-    data = {"data": query}
-    response = requests.post("https://overpass-api.de/api/interpreter", data=data)
-
-    return response.text
+    response = requests.post(
+        OVERPASS_URL,
+        data={"data": query},
+        headers={"User-Agent": USER_AGENT},
+        timeout=180,
+    )
+    text = response.text
+    # Overpass answers errors (rate limit, timeout, overload) with an HTML page.
+    # Raise before the caller caches it, so a retry hits Overpass again.
+    if response.status_code != 200 or "<osm" not in text[:500]:
+        raise OverpassError(
+            f"Overpass error (HTTP {response.status_code}) from {OVERPASS_URL}: {text[:500]}"
+        )
+    return text
 
 
 def get_buildings_from_overpass_xml(xml: str) -> list[TransientOSMBuilding]:
