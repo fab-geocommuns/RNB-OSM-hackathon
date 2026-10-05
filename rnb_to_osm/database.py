@@ -135,7 +135,7 @@ def import_rnb_buildings(db: SQLAlchemy) -> None:
             ALTER TABLE rnb_buildings_temp DROP COLUMN ext_ids;
             ALTER TABLE rnb_buildings_temp DROP COLUMN addresses;
             ALTER TABLE rnb_buildings_temp DROP COLUMN plots;
-            ALTER TABLE rnb_buildings_temp ADD INDEX idx_rnb_buildings_shape (shape) USING GIST;
+            CREATE INDEX idx_rnb_buildings_shape ON rnb_buildings_temp USING gist (shape);
             ALTER TABLE rnb_buildings_temp RENAME TO rnb_buildings;
             """
         )
