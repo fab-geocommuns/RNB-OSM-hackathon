@@ -33,6 +33,10 @@ docker compose up -d
 ```
 
 The app listens on port 7899 (gunicorn) behind `nginx-proxy`, which handles HTTPS with Let's Encrypt.
+`nginx-proxy` is built from `nginx/Dockerfile`, which pins its version and turns HTTP/2 off; `nginx/test_http2.sh` checks it. After changing it, recreate the container (a reload is not enough):
+```bash
+docker compose up -d --build --force-recreate nginx-proxy
+```
 
 ### Manual Setup
 

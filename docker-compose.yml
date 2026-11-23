@@ -31,7 +31,7 @@ services:
 
   nginx-proxy:
     container_name: nginx-proxy
-    image: nginxproxy/nginx-proxy
+    build: ./nginx
     restart: unless-stopped
     labels:
       - com.github.nginx-proxy.nginx
@@ -46,7 +46,7 @@ services:
       - /var/run/docker.sock:/tmp/docker.sock:ro
 
   nginx-proxy-acme:
-    image: nginxproxy/acme-companion
+    image: nginxproxy/acme-companion:v2.8.2
     restart: unless-stopped
     environment:
       DEFAULT_EMAIL: ${DEFAULT_EMAIL}
